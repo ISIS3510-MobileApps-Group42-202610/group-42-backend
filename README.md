@@ -1,98 +1,226 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🛒 University Marketplace API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS REST API for a university marketplace — buy/sell textbooks, notes, and supplies. Built with TypeORM + PostgreSQL + Bcrypt + JWT.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📐 Architecture
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+src/
+├── auth/           # JWT authentication (register/login, bcrypt hashing)
+├── users/          # User profiles, wishlist, purchase history
+├── sellers/        # Seller profiles (auto-created on register)
+├── listings/       # Product listings, images, price history
+├── transactions/   # Purchase flow
+├── reviews/        # Post-purchase reviews (updates seller avg_rating)
+├── messages/       # Buyer ↔ Seller chat
+└── courses/        # Course catalog (linked to listings)
 ```
 
-## Compile and run the project
+---
+
+## 🚀 Quick Start
+
+### 1. Install dependencies
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+### 2. Configure environment
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
+# Edit .env with your PostgreSQL credentials and JWT secret
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 3. Run (dev — auto-syncs DB schema)
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 4. Production
 
-## Resources
+```bash
+npm run build
+npm run start:prod
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+> **Note:** `synchronize: true` is enabled in development. For production, set `NODE_ENV=production` and use TypeORM migrations.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## 🔐 Authentication
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+All protected routes require: `Authorization: Bearer <token>`
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 📡 API Endpoints
 
-## License
+### Auth
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+| Method | Endpoint             | Description         |
+| ------ | -------------------- | ------------------- |
+| POST   | `/api/auth/register` | Register a new user |
+| POST   | `/api/auth/login`    | Login and get JWT   |
+
+**Register body:**
+
+```json
+{
+  "name": "Juan",
+  "last_name": "García",
+  "email": "juan@uni.edu",
+  "password": "secret123",
+  "semester": 4,
+  "is_seller": true
+}
+```
+
+---
+
+### Users 🔒
+
+| Method | Endpoint                            | Description          |
+| ------ | ----------------------------------- | -------------------- |
+| GET    | `/api/users`                        | List all users       |
+| GET    | `/api/users/me`                     | Get own profile      |
+| PATCH  | `/api/users/me`                     | Update own profile   |
+| GET    | `/api/users/me/wishlist`            | Get wishlist         |
+| POST   | `/api/users/me/wishlist/:listingId` | Add to wishlist      |
+| DELETE | `/api/users/me/wishlist/:listingId` | Remove from wishlist |
+| GET    | `/api/users/me/purchases`           | Purchase history     |
+| GET    | `/api/users/:id`                    | Get user by ID       |
+
+---
+
+### Sellers
+
+| Method | Endpoint             | Description            |
+| ------ | -------------------- | ---------------------- |
+| GET    | `/api/sellers`       | List all sellers       |
+| GET    | `/api/sellers/me` 🔒 | Get own seller profile |
+| GET    | `/api/sellers/:id`   | Get seller by ID       |
+
+---
+
+### Listings
+
+| Method | Endpoint                           | Description                                       |
+| ------ | ---------------------------------- | ------------------------------------------------- |
+| GET    | `/api/listings`                    | Browse listings (filter: `?category=&condition=`) |
+| GET    | `/api/listings/:id`                | Get listing detail                                |
+| POST   | `/api/listings` 🔒                 | Create listing (sellers only)                     |
+| PATCH  | `/api/listings/:id` 🔒             | Update listing                                    |
+| DELETE | `/api/listings/:id` 🔒             | Delete listing                                    |
+| POST   | `/api/listings/:id/images` 🔒      | Add image                                         |
+| DELETE | `/api/listings/images/:imageId` 🔒 | Remove image                                      |
+| GET    | `/api/listings/:id/price-history`  | Price history                                     |
+
+**Create listing body:**
+
+```json
+{
+  "title": "Calculus Stewart 8th Edition",
+  "product": "Textbook",
+  "category": "textbook",
+  "condition": "good",
+  "original_price": 120000,
+  "selling_price": 65000,
+  "course_id": 1
+}
+```
+
+**Categories:** `textbook | notes | supplies | electronics | other`  
+**Conditions:** `new | like_new | good | fair | poor`
+
+---
+
+### Transactions 🔒
+
+| Method | Endpoint                     | Description        |
+| ------ | ---------------------------- | ------------------ |
+| POST   | `/api/transactions`          | Purchase a listing |
+| GET    | `/api/transactions/my`       | My purchases       |
+| GET    | `/api/transactions/my-sales` | My sales (sellers) |
+| GET    | `/api/transactions/:id`      | Transaction detail |
+
+**Purchase body:**
+
+```json
+{ "listing_id": 5 }
+```
+
+> Purchasing a listing automatically marks it as `active: false` and increments the seller's `total_sales`.
+
+---
+
+### Reviews 🔒
+
+| Method | Endpoint                       | Description    |
+| ------ | ------------------------------ | -------------- |
+| POST   | `/api/reviews/transaction/:id` | Leave a review |
+| GET    | `/api/reviews/transaction/:id` | Get review     |
+
+**Review body:**
+
+```json
+{ "content": "Great seller, fast response!", "rating": 5 }
+```
+
+> Reviews automatically update the seller's `avg_rating`.
+
+---
+
+### Messages 🔒
+
+| Method | Endpoint                         | Description                |
+| ------ | -------------------------------- | -------------------------- |
+| POST   | `/api/messages`                  | Send a message to a seller |
+| GET    | `/api/messages`                  | My conversations           |
+| GET    | `/api/messages/seller/:sellerId` | Conversation with seller   |
+| PATCH  | `/api/messages/:id/read`         | Mark as read (seller only) |
+
+**Send message body:**
+
+```json
+{ "seller_id": 2, "content": "Is this still available?" }
+```
+
+---
+
+### Courses
+
+| Method | Endpoint              | Description      |
+| ------ | --------------------- | ---------------- |
+| GET    | `/api/courses`        | List all courses |
+| GET    | `/api/courses/:id`    | Get course       |
+| POST   | `/api/courses` 🔒     | Create course    |
+| DELETE | `/api/courses/:id` 🔒 | Delete course    |
+
+---
+
+## 🗄️ Database Schema Summary
+
+| Table             | Key Relations                                                                   |
+| ----------------- | ------------------------------------------------------------------------------- |
+| `users`           | One → One `sellers`, Many ↔ Many `listings` (wishlist)                          |
+| `sellers`         | One `user`, Many `listings`, Many `transactions`                                |
+| `listings`        | Belongs to `seller`, optional `course`, has `listing_images`, `historic_prices` |
+| `transactions`    | Buyer (`user`) + Seller + Listing → One `review`                                |
+| `reviews`         | Belongs to one `transaction`                                                    |
+| `messages`        | Between `buyer` (user) and `seller`                                             |
+| `historic_prices` | Tracks price changes per listing                                                |
+| `courses`         | Referenced by `listings`                                                        |
+
+---
+
+## 🔧 Tech Stack
+
+- **Framework:** NestJS 10
+- **ORM:** TypeORM 0.3 (PostgreSQL)
+- **Auth:** JWT (passport-jwt) + Bcrypt password hashing
+- **Validation:** class-validator + class-transformer
