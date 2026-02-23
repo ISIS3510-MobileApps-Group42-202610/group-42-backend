@@ -3,13 +3,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './modules/users/users.module';
-import { ListingsModule } from './modules/listings/listings.module';
-import { TransactionsModule } from './modules/transactions/transactions.module';
-import { MessagesModule } from './modules/messages/messages.module';
-import { ReviewsModule } from './modules/reviews/reviews.module';
-import { CoursesModule } from './modules/courses/courses.module';
-import { PriceHistoryModule } from './modules/price-history/price-history.module';
+import { UsersModule } from './users/users.module';
+import { ListingsModule } from './listings/listings.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { MessagesModule } from './messages/messages.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { CoursesModule } from './courses/courses.module';
 
 const stage = process.env.STAGE ?? process.env.NODE_ENV ?? 'dev';
 const isProd = stage === 'prod' || stage === 'production';
@@ -37,7 +36,6 @@ const isProd = stage === 'prod' || stage === 'production';
     MessagesModule,
     ReviewsModule,
     CoursesModule,
-    PriceHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
