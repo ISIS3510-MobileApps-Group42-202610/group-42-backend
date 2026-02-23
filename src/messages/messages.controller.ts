@@ -1,4 +1,3 @@
-/* eslint-disable */
 import {
   Controller,
   Get,
@@ -14,9 +13,17 @@ import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IsString, IsInt } from 'class-validator';
 
-class SendMessageDto {
+class BuyerSendMessageDto {
   @IsInt()
   seller_id: number;
+
+  @IsString()
+  content: string;
+}
+
+class SellerSendMessageDto {
+  @IsInt()
+  buyer_id: number;
 
   @IsString()
   content: string;
@@ -27,27 +34,63 @@ class SendMessageDto {
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
-  @Post()
-  send(@Request() req, @Body() dto: SendMessageDto) {
-    return this.messagesService.sendMessage(
+  // ── Send ────────────────────────────────────────────────────────────────────
+
+  /** Buyer sends a message to a seller */
+  @Post('buyer')
+  sendAsBuyer(@Request() req, @Body() dto: BuyerSendMessageDto) {
+    return this.messagesService.sendMessageAsBuyer(
       req.user.id,
       dto.seller_id,
       dto.content,
     );
   }
 
-  @Get()
-  getMyConversations(@Request() req) {
-    return this.messagesService.getMyConversations(req.user.id);
+  /** Seller sends a message to a buyer */
+  @Post('seller')
+  sendAsSeller(@Request() req, @Body() dto: SellerSendMessageDto) {
+    return this.messagesService.sendMessageAsSeller(
+      req.user.id,
+      dto.buyer_id,
+      dto.content,
+    );
   }
 
-  @Get('seller/:sellerId')
-  getConversation(
+  // ── Conversations list ──────────────────────────────────────────────────────
+
+  /** Get all conversations where I am the buyer */
+  @Get('as-buyer')
+  getMyConversationsAsBuyer(@Request() req) {
+    return this.messagesService.getMyConversationsAsBuyer(req.user.id);
+  }
+
+  /** Get all conversations where I am the seller */
+  @Get('as-seller')
+  getMyConversationsAsSeller(@Request() req) {
+    return this.messagesService.getMyConversationsAsSeller(req.user.id);
+  }
+
+  // ── Thread views ────────────────────────────────────────────────────────────
+
+  /** Buyer views thread with a specific seller */
+  @Get('thread/seller/:sellerId')
+  getConversationWithSeller(
     @Request() req,
     @Param('sellerId', ParseIntPipe) sellerId: number,
   ) {
     return this.messagesService.getConversation(req.user.id, sellerId);
   }
+
+  /** Seller views thread with a specific buyer */
+  @Get('thread/buyer/:buyerId')
+  getConversationWithBuyer(
+    @Request() req,
+    @Param('buyerId', ParseIntPipe) buyerId: number,
+  ) {
+    return this.messagesService.getConversationWithBuyer(req.user.id, buyerId);
+  }
+
+  // ── Mark as read ────────────────────────────────────────────────────────────
 
   @Patch(':id/read')
   markAsRead(@Param('id', ParseIntPipe) id: number, @Request() req) {

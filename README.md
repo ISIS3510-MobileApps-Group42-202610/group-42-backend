@@ -1,309 +1,259 @@
-# UniMarket Backend
+# 🛒 University Marketplace API
 
-A production-ready NestJS backend for a university student marketplace application. This is a complete implementation featuring users (Buyer/Seller), listings, transactions, messaging, reviews, and price analytics.
+A NestJS REST API for a university marketplace — buy/sell textbooks, notes, and supplies. Built with TypeORM + PostgreSQL + Bcrypt + JWT.
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
-- Node.js 18+ and npm/yarn
-- PostgreSQL 12+
-- Git
-
-### Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd group-42-backend
-
-# Install dependencies
-npm install
-
-# Create .env file from example
-cp .env.example .env
-
-# Update DATABASE_URL in .env
-# DATABASE_URL=postgresql://user:password@localhost:5432/unimarket
-
-# Run in development
-npm run start:dev
-```
-
-Your API is now running at `http://localhost:3000`
-
-## 📚 Documentation
-
-This project includes comprehensive documentation:
-
-### 1. **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - Start here!
-   - Complete installation instructions
-   - Environment configuration
-   - Database setup
-   - Development workflow
-   - Troubleshooting guide
-   - Deployment instructions
-
-### 2. **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - API Reference
-   - All 59 endpoints documented
-   - Request/response examples
-   - Data models and relationships
-   - Error handling
-   - Query parameters and filters
-
-### 3. **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Technical Details
-   - Architecture overview
-   - Entity relationships
-   - Feature modules breakdown
-   - Business logic highlights
-   - Security features
-   - Best practices implemented
-
-### 4. **.env.example** - Configuration template
-   - All environment variables
-   - Cloud provider examples
-   - Comments for each setting
-
-## ✨ Features
-
-### Core Functionality
-- ✅ **User Management** - Buyer and Seller accounts with Single Table Inheritance
-- ✅ **Listings** - Create, manage, search university items for sale
-- ✅ **Transactions** - Handle purchases with status tracking
-- ✅ **Direct Messaging** - Chat between buyers and sellers
-- ✅ **Reviews & Ratings** - Bidirectional review system
-- ✅ **Course Integration** - Link listings to university courses
-- ✅ **Price Analytics** - Track pricing trends and demand
-
-### Technical Features
-- ✅ **TypeORM** with PostgreSQL
-- ✅ **UUID Primary Keys** for security
-- ✅ **Single Table Inheritance** for User types
-- ✅ **Environment-based Configuration** via ConfigService
-- ✅ **Global Exception Handling** with standardized responses
-- ✅ **Input Validation** on all DTOs
-- ✅ **Password Hashing** with bcrypt
-- ✅ **CORS Support** for web clients
-- ✅ **RESTful API Design** with pagination
-- ✅ **Modular Architecture** with 7 feature modules
-
-## 📊 Architecture
+## 📐 Architecture
 
 ```
 src/
-├── common/               # Shared utilities
-│   ├── enums/           # All enumeration types
-│   └── filters/         # Global exception filter
-├── modules/             # 7 Feature modules
-│   ├── users/           # User management
-│   ├── listings/        # Product listings
-│   ├── transactions/    # Purchase transactions
-│   ├── messages/        # Direct messaging
-│   ├── reviews/         # Rating system
-│   ├── courses/         # University courses
-│   └── price-history/   # Price analytics
-├── app.module.ts        # Root module
-├── main.ts              # Application entry point
-└── ...
+├── auth/           # JWT authentication (register/login, bcrypt hashing)
+├── users/          # User profiles, wishlist, purchase history
+├── sellers/        # Seller profiles (auto-created on register)
+├── listings/       # Product listings, images, price history
+├── transactions/   # Purchase flow
+├── reviews/        # Post-purchase reviews (updates seller avg_rating)
+├── messages/       # Bidirectional Buyer ↔ Seller chat
+└── courses/        # Course catalog (linked to listings)
 ```
 
-## 🗄️ Database
+---
 
-**8 Tables with proper relationships:**
-- `users` - Base user table (Single Table Inheritance)
-- `listings` - Product listings
-- `listing_images` - Listing photos
-- `transactions` - Purchase records
-- `messages` - Direct messages
-- `reviews` - Ratings and reviews
-- `courses` - University courses
-- `price_histories` - Price analytics
-- Additional junction table for many-to-many relationships
+## 🚀 Quick Start
 
-## 🔧 Available Commands
+### 1. Install dependencies
+```bash
+npm install
+```
+
+### 2. Configure environment
+```bash
+cp .env.example .env
+# Edit .env with your PostgreSQL credentials and JWT secret
+```
+
+### 3. Run (dev — auto-syncs DB schema)
+```bash
+npm run start:dev
+```
+
+### 4. Production
+```bash
+npm run build
+npm run start:prod
+```
+
+> **Note:** `synchronize: true` is enabled in development. For production, set `NODE_ENV=production` and use TypeORM migrations.
+
+---
+
+## 🔐 Authentication
+
+All protected routes require: `Authorization: Bearer <token>`
+
+---
+
+## 📡 API Endpoints
+
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/auth/register` | Register a new user |
+| POST | `/api/v1/auth/login` | Login and get JWT |
+
+**Register body:**
+```json
+{
+  "name": "Juan",
+  "last_name": "García",
+  "email": "juan@uni.edu",
+  "password": "secret123",
+  "semester": 4,
+  "is_seller": true
+}
+```
+
+---
+
+### Users 🔒
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users` | List all users |
+| GET | `/api/v1/users/me` | Get own profile |
+| PATCH | `/api/v1/users/me` | Update own profile |
+| GET | `/api/v1/users/me/wishlist` | Get wishlist |
+| POST | `/api/v1/users/me/wishlist/:listingId` | Add to wishlist |
+| DELETE | `/api/v1/users/me/wishlist/:listingId` | Remove from wishlist |
+| GET | `/api/v1/users/me/purchases` | Purchase history |
+| GET | `/api/v1/users/:id` | Get user by ID |
+
+---
+
+### Sellers
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/sellers` | List all sellers |
+| GET | `/api/v1/sellers/me` 🔒 | Get own seller profile |
+| GET | `/api/v1/sellers/:id` | Get seller by ID |
+
+---
+
+### Listings
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/listings` | Browse listings (filter: `?category=&condition=`) |
+| GET | `/api/v1/listings/:id` | Get listing detail |
+| POST | `/api/v1/listings` 🔒 | Create listing (sellers only) |
+| PATCH | `/api/v1/listings/:id` 🔒 | Update listing |
+| DELETE | `/api/v1/listings/:id` 🔒 | Delete listing |
+| POST | `/api/v1/listings/:id/images` 🔒 | Add image |
+| DELETE | `/api/v1/listings/images/:imageId` 🔒 | Remove image |
+| GET | `/api/v1/listings/:id/price-history` | Price history |
+
+**Create listing body:**
+```json
+{
+  "title": "Calculus Stewart 8th Edition",
+  "product": "Textbook",
+  "category": "textbook",
+  "condition": "good",
+  "original_price": 120000,
+  "selling_price": 65000,
+  "course_id": 1
+}
+```
+
+**Categories:** `textbook | notes | supplies | electronics | other`
+**Conditions:** `new | like_new | good | fair | poor`
+
+---
+
+### Transactions 🔒
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/transactions` | Purchase a listing |
+| GET | `/api/v1/transactions/my` | My purchases |
+| GET | `/api/v1/transactions/my-sales` | My sales (sellers only) |
+| GET | `/api/v1/transactions/:id` | Transaction detail |
+
+**Purchase body:**
+```json
+{ "listing_id": 5 }
+```
+
+> Purchasing a listing automatically marks it as `active: false` and increments the seller's `total_sales`.
+
+---
+
+### Reviews 🔒
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/reviews/transaction/:id` | Leave a review |
+| GET | `/api/v1/reviews/transaction/:id` | Get review for a transaction |
+
+**Review body:**
+```json
+{ "content": "Great seller, fast response!", "rating": 5 }
+```
+
+> Reviews automatically recalculate and update the seller's `avg_rating`.
+
+---
+
+### Messages 🔒
+
+Both buyers and sellers can initiate and reply to conversations. Every message stores a `sent_by` field (`buyer` or `seller`) so both clients always know who wrote each message.
+
+**Sending**
+
+| Method | Endpoint | Who uses it | Description |
+|--------|----------|-------------|-------------|
+| POST | `/api/v1/messages/buyer` | Buyer | Send a message to a seller |
+| POST | `/api/v1/messages/seller` | Seller | Send a message to a buyer |
+
+Buyer send body:
+```json
+{ "seller_id": 2, "content": "Is this still available?" }
+```
+
+Seller send body:
+```json
+{ "buyer_id": 10, "content": "Yes, still available! Interested?" }
+```
+
+**Conversation lists**
+
+| Method | Endpoint | Who uses it | Description |
+|--------|----------|-------------|-------------|
+| GET | `/api/v1/messages/as-buyer` | Buyer | All threads where I am the buyer |
+| GET | `/api/v1/messages/as-seller` | Seller | All threads where I am the seller |
+
+**Thread views**
+
+| Method | Endpoint | Who uses it | Description |
+|--------|----------|-------------|-------------|
+| GET | `/api/v1/messages/thread/seller/:sellerId` | Buyer | Full thread with a specific seller |
+| GET | `/api/v1/messages/thread/buyer/:buyerId` | Seller | Full thread with a specific buyer |
+
+**Mark as read**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| PATCH | `/api/v1/messages/:id/read` | Mark a received message as read |
+
+> Each party can only mark messages sent **by the other party** as read. Attempting to mark your own message as read returns `403 Forbidden`.
+
+**`sent_by` enum values:** `buyer` | `seller`
+
+---
+
+### Courses
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/courses` | List all courses |
+| GET | `/api/v1/courses/:id` | Get course by ID |
+| POST | `/api/v1/courses` 🔒 | Create a course |
+| DELETE | `/api/v1/courses/:id` 🔒 | Delete a course |
+
+---
+
+## 🗄️ Database Schema Summary
+
+| Table | Key Relations |
+|-------|--------------|
+| `users` | One → One `sellers`, Many ↔ Many `listings` (wishlist) |
+| `sellers` | One `user`, Many `listings`, Many `transactions` |
+| `listings` | Belongs to `seller`, optional `course`, has `listing_images`, `historic_prices` |
+| `transactions` | Buyer (`user`) + Seller + Listing → One `review` |
+| `reviews` | Belongs to one `transaction` |
+| `messages` | Between `buyer` (user) and `seller` — `sent_by` enum tracks direction of each message |
+| `historic_prices` | Tracks price changes per listing over time |
+| `courses` | Referenced by `listings` |
+
+---
+
+## 🧪 Testing
 
 ```bash
-# Development
-npm run start:dev      # Run with auto-reload
-npm run start:debug    # Run in debug mode
+# Run all tests
+npm run test
 
-# Production
-npm run build          # Build for production
-npm run start:prod     # Run production build
-
-# Code Quality
-npm run format         # Format code with Prettier
-npm run lint          # Lint with ESLint
-
-# Testing
-npm test              # Run unit tests
-npm run test:watch    # Run tests in watch mode
-npm run test:cov      # Generate coverage report
-npm run test:e2e      # Run E2E tests
+# Run with coverage report
+npm run test:cov
 ```
 
-## 📝 Example API Calls
+Tests use fully mocked repositories — no database connection required. Coverage spans all 7 services: Auth, Users, Sellers, Listings, Transactions, Reviews, Messages.
 
-### Create a Buyer Account
-```bash
-curl -X POST http://localhost:3000/api/users/buyers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "universityEmail": "student@university.edu",
-    "password": "SecurePassword123",
-    "fullName": "John Doe",
-    "faculty": "Engineering",
-    "academicYear": "2024"
-  }'
-```
+CI runs automatically on every push and pull request via GitHub Actions (`.github/workflows/ci.yml`).
 
-### Create a Listing
-```bash
-curl -X POST "http://localhost:3000/api/listings?sellerId=<seller-id>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Calculus Textbook",
-    "description": "Used but in great condition",
-    "category": "textbooks",
-    "condition": "good",
-    "originalPrice": 120,
-    "sellingPrice": 75
-  }'
-```
+---
 
-### Search Listings
-```bash
-curl "http://localhost:3000/api/listings/search?category=textbooks&maxPrice=100&skip=0&take=10"
-```
+## 🔧 Tech Stack
 
-See [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) for all 59 endpoints.
-
-## 🔒 Security
-
-- **Password Hashing**: Bcrypt with 10 salt rounds
-- **UUID Keys**: Prevents ID enumeration attacks
-- **SQL Injection Prevention**: TypeORM parameterized queries
-- **Input Validation**: Class-validator on all DTOs
-- **CORS**: Configurable per environment
-- **Error Handling**: No sensitive information in responses
-
-## 🌍 Environment Support
-
-Works with any PostgreSQL provider:
-- **Local**: PostgreSQL installation
-- **Cloud**: Neon, AWS RDS, Azure Database, Heroku Postgres
-- **Docker**: With docker-compose
-
-
-## 📈 Project Statistics
-
-- **7** Feature Modules
-- **8** Entities with proper relationships
-- **32** DTOs with validation
-- **59** RESTful endpoints
-- **100%** TypeScript
-- **Production-Ready** Code
-
-## 🛠️ Technology Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | NestJS 11.x |
-| Language | TypeScript |
-| Database | PostgreSQL |
-| ORM | TypeORM 0.3.x |
-| Validation | class-validator |
-| Security | bcrypt, UUID |
-| Config | @nestjs/config |
-
-## 📚 Learning Resources
-
-- [NestJS Documentation](https://docs.nestjs.com)
-- [TypeORM Documentation](https://typeorm.io)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs)
-
-## 🤝 Contributing
-
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make changes and test
-3. Format code: `npm run format`
-4. Lint code: `npm run lint`
-5. Commit: `git commit -am 'Add your feature'`
-6. Push: `git push origin feature/your-feature`
-7. Create Pull Request
-
-## 📄 License
-
-UNLICENSED
-
-
-
-
-
-$ npm install
-```
-
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- **Framework:** NestJS 10
+- **ORM:** TypeORM 0.3 (PostgreSQL)
+- **Auth:** JWT (passport-jwt) + Bcrypt password hashing
+- **Validation:** class-validator + class-transformer
+- **Testing:** Jest + ts-jest
+- **CI:** GitHub Actions

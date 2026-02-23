@@ -9,6 +9,11 @@ import {
 import { User } from '../users/user.entity';
 import { Seller } from '../sellers/seller.entity';
 
+export enum SentBy {
+  BUYER = 'buyer',
+  SELLER = 'seller',
+}
+
 @Entity('messages')
 export class Message {
   @PrimaryGeneratedColumn()
@@ -22,6 +27,9 @@ export class Message {
 
   @Column({ type: 'text' })
   content: string;
+
+  @Column({ type: 'enum', enum: SentBy })
+  sent_by: SentBy;
 
   @CreateDateColumn()
   sent_at: Date;
