@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return "Este es el backend del marketplace :)"', () => {
+      expect(appController.getHello()).toBe(
+        'Este es el backend del marketplace :)',
+      );
     });
   });
 });
