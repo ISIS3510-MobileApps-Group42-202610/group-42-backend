@@ -9,6 +9,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { MessagesModule } from './messages/messages.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { CoursesModule } from './courses/courses.module';
+import { SellersModule } from './sellers/sellers.module';
 
 const stage = process.env.STAGE ?? process.env.NODE_ENV ?? 'dev';
 const isProd = stage === 'prod' || stage === 'production';
@@ -36,6 +37,7 @@ const isProd = stage === 'prod' || stage === 'production';
     MessagesModule,
     ReviewsModule,
     CoursesModule,
+    SellersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
