@@ -10,7 +10,3 @@ export class HomeResponseDto {
   trending: Listing[];
   categories: CategoryRankDto[];
 }
-
-export class TrendingListingDto extends Listing {
-  trend_score?: number;
-}

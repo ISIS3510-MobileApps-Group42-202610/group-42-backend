@@ -24,6 +24,7 @@ const mockListingRepo = {
   save: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  createQueryBuilder: jest.fn(),
 };
 
 const mockImageRepo = {
@@ -216,4 +217,268 @@ describe('ListingsService', () => {
       );
     });
   });
+
+  // ── getHomeData ──────────────────────────────────────────────────────────────
+
+  describe('getHomeData', () => {
+    it('should return home data with recent, trending, and categories', async () => {
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn(),
+        leftJoin: jest.fn(),
+        where: jest.fn(),
+        andWhere: jest.fn(),
+        groupBy: jest.fn(),
+        addGroupBy: jest.fn(),
+        select: jest.fn(),
+        addSelect: jest.fn(),
+        orderBy: jest.fn(),
+        limit: jest.fn(),
+        getMany: jest.fn(),
+        getRawMany: jest.fn(),
+      };
+
+      const recentListings = [{ id: 1, title: 'Recent Book' }];
+      const trendingScores = [{ id: 2, trend_score: 100 }];
+      const trendingListings = [{ id: 2, title: 'Trending Book' }];
+      const categories = [{ category: 'textbook', count: 10 }];
+
+      // Setup for getRecentListings
+      mockListingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.leftJoinAndSelect.mockReturnThis();
+      mockQueryBuilder.where.mockReturnThis();
+      mockQueryBuilder.orderBy.mockReturnThis();
+      mockQueryBuilder.limit.mockReturnThis();
+      mockQueryBuilder.getMany.mockResolvedValueOnce(recentListings);
+
+      // Setup for getTrendingListings - first query
+      mockQueryBuilder.leftJoin.mockReturnThis();
+      mockQueryBuilder.groupBy.mockReturnThis();
+      mockQueryBuilder.addGroupBy.mockReturnThis();
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(trendingScores);
+
+      // Setup for getTrendingListings - second query
+      mockQueryBuilder.getMany.mockResolvedValueOnce(trendingListings);
+
+      // Setup for getCategories
+      mockQueryBuilder.andWhere.mockReturnThis();
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce([
+        { category: 'textbook', count: '10' },
+      ]);
+
+      const result = await service.getHomeData();
+
+      expect(result).toHaveProperty('recent');
+      expect(result).toHaveProperty('trending');
+      expect(result).toHaveProperty('categories');
+      expect(mockListingRepo.createQueryBuilder).toHaveBeenCalled();
+    });
+  });
+
+  // ── getRecentListings ────────────────────────────────────────────────────────
+
+  describe('getRecentListings', () => {
+    it('should return recent listings ordered by creation date', async () => {
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn(),
+        where: jest.fn(),
+        orderBy: jest.fn(),
+        limit: jest.fn(),
+        getMany: jest.fn(),
+      };
+
+      const recentListings = [
+        { id: 1, title: 'Book 1', created_at: new Date('2025-01-01') },
+        { id: 2, title: 'Book 2', created_at: new Date('2024-12-01') },
+      ];
+
+      mockListingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.leftJoinAndSelect.mockReturnThis();
+      mockQueryBuilder.where.mockReturnThis();
+      mockQueryBuilder.orderBy.mockReturnThis();
+      mockQueryBuilder.limit.mockReturnThis();
+      mockQueryBuilder.getMany.mockResolvedValue(recentListings);
+
+      const result = await service['getRecentListings']();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].title).toBe('Book 1');
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(15);
+    });
+
+    it('should load related entities (images, seller, user, course)', async () => {
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn(),
+        where: jest.fn(),
+        orderBy: jest.fn(),
+        limit: jest.fn(),
+        getMany: jest.fn(),
+      };
+
+      mockListingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.leftJoinAndSelect.mockReturnThis();
+      mockQueryBuilder.where.mockReturnThis();
+      mockQueryBuilder.orderBy.mockReturnThis();
+      mockQueryBuilder.limit.mockReturnThis();
+      mockQueryBuilder.getMany.mockResolvedValue([]);
+
+      await service['getRecentListings']();
+
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'listing.images',
+        'images',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'listing.seller',
+        'seller',
+      );
+    });
+  });
+
+  // ── getTrendingListings ──────────────────────────────────────────────────────
+
+  describe('getTrendingListings', () => {
+    it('should return trending listings based on scoring algorithm', async () => {
+      const mockQueryBuilder = {
+        leftJoin: jest.fn(),
+        where: jest.fn(),
+        groupBy: jest.fn(),
+        addGroupBy: jest.fn(),
+        select: jest.fn(),
+        addSelect: jest.fn(),
+        orderBy: jest.fn(),
+        limit: jest.fn(),
+        getRawMany: jest.fn(),
+        leftJoinAndSelect: jest.fn(),
+        getMany: jest.fn(),
+      };
+
+      const trendScores = [
+        { id: 1, trend_score: 85.5 },
+        { id: 2, trend_score: 72.3 },
+      ];
+
+      const trendingListings = [
+        { id: 1, title: 'Popular Book', seller: { user: {} } },
+        { id: 2, title: 'Trending Book', seller: { user: {} } },
+      ];
+
+      mockListingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.leftJoin.mockReturnThis();
+      mockQueryBuilder.where.mockReturnThis();
+      mockQueryBuilder.groupBy.mockReturnThis();
+      mockQueryBuilder.addGroupBy.mockReturnThis();
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
+      mockQueryBuilder.orderBy.mockReturnThis();
+      mockQueryBuilder.limit.mockReturnThis();
+      mockQueryBuilder.getRawMany.mockResolvedValueOnce(trendScores);
+
+      mockQueryBuilder.leftJoinAndSelect.mockReturnThis();
+      mockQueryBuilder.getMany.mockResolvedValueOnce(trendingListings);
+
+      const result = await service['getTrendingListings']();
+
+      expect(result).toHaveLength(2);
+      expect(mockQueryBuilder.getRawMany).toHaveBeenCalled();
+      expect(mockQueryBuilder.limit).toHaveBeenCalledWith(15);
+    });
+
+    it('should return empty array when no trending listings found', async () => {
+      const mockQueryBuilder = {
+        leftJoin: jest.fn(),
+        where: jest.fn(),
+        groupBy: jest.fn(),
+        addGroupBy: jest.fn(),
+        select: jest.fn(),
+        addSelect: jest.fn(),
+        orderBy: jest.fn(),
+        limit: jest.fn(),
+        getRawMany: jest.fn(),
+      };
+
+      mockListingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.leftJoin.mockReturnThis();
+      mockQueryBuilder.where.mockReturnThis();
+      mockQueryBuilder.groupBy.mockReturnThis();
+      mockQueryBuilder.addGroupBy.mockReturnThis();
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
+      mockQueryBuilder.orderBy.mockReturnThis();
+      mockQueryBuilder.limit.mockReturnThis();
+      mockQueryBuilder.getRawMany.mockResolvedValue([]);
+
+      const result = await service['getTrendingListings']();
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  // ── getCategories ───────────────────────────────────────────────────────────
+
+  describe('getCategories', () => {
+    it('should return categories with counts', async () => {
+      const mockQueryBuilder = {
+        select: jest.fn(),
+        addSelect: jest.fn(),
+        where: jest.fn(),
+        andWhere: jest.fn(),
+        groupBy: jest.fn(),
+        orderBy: jest.fn(),
+        getRawMany: jest.fn(),
+      };
+
+      const rawCategories = [
+        { category: 'textbooks', count: '25' },
+        { category: 'notes', count: '15' },
+        { category: 'supplies', count: '10' },
+      ];
+
+      mockListingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
+      mockQueryBuilder.where.mockReturnThis();
+      mockQueryBuilder.andWhere.mockReturnThis();
+      mockQueryBuilder.groupBy.mockReturnThis();
+      mockQueryBuilder.orderBy.mockReturnThis();
+      mockQueryBuilder.getRawMany.mockResolvedValue(rawCategories);
+
+      const result = await service['getCategories']();
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toEqual({ category: 'textbooks', count: 25 });
+      expect(result[1]).toEqual({ category: 'notes', count: 15 });
+      expect(result[2]).toEqual({ category: 'supplies', count: 10 });
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('count', 'DESC');
+    });
+
+    it('should exclude null categories', async () => {
+      const mockQueryBuilder = {
+        select: jest.fn(),
+        addSelect: jest.fn(),
+        where: jest.fn(),
+        andWhere: jest.fn(),
+        groupBy: jest.fn(),
+        orderBy: jest.fn(),
+        getRawMany: jest.fn(),
+      };
+
+      mockListingRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockQueryBuilder.select.mockReturnThis();
+      mockQueryBuilder.addSelect.mockReturnThis();
+      mockQueryBuilder.where.mockReturnThis();
+      mockQueryBuilder.andWhere.mockReturnThis();
+      mockQueryBuilder.groupBy.mockReturnThis();
+      mockQueryBuilder.orderBy.mockReturnThis();
+      mockQueryBuilder.getRawMany.mockResolvedValue([]);
+
+      await service['getCategories']();
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'listing.category IS NOT NULL',
+      );
+    });
+  });
 });
+
