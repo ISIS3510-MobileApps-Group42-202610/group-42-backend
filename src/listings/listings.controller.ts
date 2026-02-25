@@ -28,6 +28,11 @@ export class ListingsController {
     return this.listingsService.findAll(category, condition);
   }
 
+  @Get('home/ranking')
+  async getHomeRanking() {
+    return this.listingsService.getHomeData();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.listingsService.findOne(id);

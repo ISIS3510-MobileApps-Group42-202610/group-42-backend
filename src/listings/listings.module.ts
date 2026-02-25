@@ -6,10 +6,19 @@ import { Listing } from './listing.entity';
 import { ListingImage } from './listing-image.entity';
 import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
+import { Transaction } from '../transactions/transaction.entity';
+import { Review } from '../reviews/review.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Listing, ListingImage, HistoricPrice, Seller]),
+    TypeOrmModule.forFeature([
+      Listing,
+      ListingImage,
+      HistoricPrice,
+      Seller,
+      Transaction,
+      Review,
+    ]),
   ],
   controllers: [ListingsController],
   providers: [ListingsService],

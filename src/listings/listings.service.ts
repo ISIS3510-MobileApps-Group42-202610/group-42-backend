@@ -11,6 +11,9 @@ import { ListingImage } from './listing-image.entity';
 import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
 import { CreateListingDto, UpdateListingDto, AddImageDto } from './listing.dto';
+import { HomeResponseDto, CategoryRankDto } from './home.dto';
+import { Transaction } from '../transactions/transaction.entity';
+import { Review } from '../reviews/review.entity';
 
 @Injectable()
 export class ListingsService {
@@ -152,5 +155,85 @@ export class ListingsService {
 
   async getPriceHistory(listingId: number) {
     return this.pricesRepository.find({ where: { listing_id: listingId } });
+  }
+
+  async getHomeData(): Promise<HomeResponseDto> {
+    const [recent, trending, categories] = await Promise.all([
+      this.getRecentListings(),
+      this.getTrendingListings(),
+      this.getCategories(),
+    ]);
+
+    return {
+      recent,
+      trending,
+      categories,
+    };
+  }
+
+  private async getRecentListings(): Promise<Listing[]> {
+    return this.listingsRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.images', 'images')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoinAndSelect('seller.user', 'user')
+      .leftJoinAndSelect('listing.course', 'course')
+      .where('listing.active = true')
+      .orderBy('listing.created_at', 'DESC')
+      .limit(15)
+      .getMany();
+  }
+
+  private async getTrendingListings(): Promise<Listing[]> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const trendingListings = await this.listingsRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.images', 'images')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoinAndSelect('seller.user', 'user')
+      .leftJoinAndSelect('listing.course', 'course')
+      .leftJoin(
+        'transaction',
+        'tx',
+        'tx.listing_id = listing.id AND tx.created_at >= :thirtyDaysAgo',
+        { thirtyDaysAgo }
+      )
+      .leftJoin('review', 'review', 'review.transaction_id = tx.id')
+      .where('listing.active = true')
+      .groupBy('listing.id')
+      .addGroupBy('seller.avg_rating')
+      .select('listing.*')
+      .addSelect(
+        `(
+          COALESCE(COUNT(DISTINCT tx.id), 0) * 0.6 +
+          COALESCE(seller.avg_rating, 0) * 0.3 +
+          COALESCE(COUNT(DISTINCT review.id), 0) * 0.1
+        )`,
+        'trend_score'
+      )
+      .orderBy('trend_score', 'DESC')
+      .limit(15)
+      .getRawAndEntities();
+
+    return trendingListings.entities;
+  }
+
+  private async getCategories(): Promise<CategoryRankDto[]> {
+    const result = await this.listingsRepository
+      .createQueryBuilder('listing')
+      .select('listing.category', 'category')
+      .addSelect('COUNT(*)', 'count')
+      .where('listing.active = true')
+      .andWhere('listing.category IS NOT NULL')
+      .groupBy('listing.category')
+      .orderBy('count', 'DESC')
+      .getRawMany();
+
+    return result.map((item) => ({
+      category: item.category,
+      count: parseInt(item.count, 10),
+    }));
   }
 }
