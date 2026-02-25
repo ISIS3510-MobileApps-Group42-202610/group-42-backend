@@ -12,8 +12,6 @@ import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
 import { CreateListingDto, UpdateListingDto, AddImageDto } from './listing.dto';
 import { HomeResponseDto, CategoryRankDto } from './home.dto';
-import { Transaction } from '../transactions/transaction.entity';
-import { Review } from '../reviews/review.entity';
 
 @Injectable()
 export class ListingsService {
@@ -188,12 +186,9 @@ export class ListingsService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const trendingListings = await this.listingsRepository
+    // First query: Get listing IDs with trend scores
+    const trendScores = await this.listingsRepository
       .createQueryBuilder('listing')
-      .leftJoinAndSelect('listing.images', 'images')
-      .leftJoinAndSelect('listing.seller', 'seller')
-      .leftJoinAndSelect('seller.user', 'user')
-      .leftJoinAndSelect('listing.course', 'course')
       .leftJoin(
         'transaction',
         'tx',
@@ -203,21 +198,38 @@ export class ListingsService {
       .leftJoin('review', 'review', 'review.transaction_id = tx.id')
       .where('listing.active = true')
       .groupBy('listing.id')
-      .addGroupBy('seller.avg_rating')
-      .select('listing.*')
+      .addGroupBy('listing.seller_id')
+      .select('listing.id', 'id')
       .addSelect(
         `(
           COALESCE(COUNT(DISTINCT tx.id), 0) * 0.6 +
-          COALESCE(seller.avg_rating, 0) * 0.3 +
+          COALESCE((SELECT AVG(rating) FROM review r WHERE r.transaction_id IN (SELECT id FROM transaction WHERE listing_id = listing.id)), 0) * 0.3 +
           COALESCE(COUNT(DISTINCT review.id), 0) * 0.1
         )`,
         'trend_score'
       )
       .orderBy('trend_score', 'DESC')
       .limit(15)
-      .getRawAndEntities();
+      .getRawMany();
 
-    return trendingListings.entities;
+    // Second query: Fetch full entities with relations for the trending listing IDs
+    if (trendScores.length === 0) {
+      return [];
+    }
+
+    const listingIds = trendScores.map((score) => score.id);
+    return this.listingsRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.images', 'images')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoinAndSelect('seller.user', 'user')
+      .leftJoinAndSelect('listing.course', 'course')
+      .where('listing.id IN (:...ids)', { ids: listingIds })
+      .orderBy(
+        `CASE ${listingIds.map((id, index) => `WHEN listing.id = ${id} THEN ${index}`).join(' ')} ELSE ${listingIds.length} END`,
+        'ASC',
+      )
+      .getMany();
   }
 
   private async getCategories(): Promise<CategoryRankDto[]> {
