@@ -155,6 +155,19 @@ export class ListingsService {
     return this.pricesRepository.find({ where: { listing_id: listingId } });
   }
 
+  async findMyListings(userId: number) {
+    const listings = await this.listingsRepository.find({
+      where: { seller: { user_id: userId } },
+      relations: ['seller', 'seller.user', 'images', 'course'],
+      order: { created_at: 'DESC' },
+    });
+
+    return {
+      active: listings.filter((l) => l.active),
+      sold: listings.filter((l) => !l.active),
+    };
+  }
+
   async getHomeData(): Promise<HomeResponseDto> {
     const [recent, trending, categories] = await Promise.all([
       this.getRecentListings(),
