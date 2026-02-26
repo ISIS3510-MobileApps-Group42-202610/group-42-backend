@@ -190,12 +190,12 @@ export class ListingsService {
     const trendScores = await this.listingsRepository
       .createQueryBuilder('listing')
       .leftJoin(
-        'transaction',
+        'transactions',
         'tx',
         'tx.listing_id = listing.id AND tx.created_at >= :thirtyDaysAgo',
         { thirtyDaysAgo }
       )
-      .leftJoin('review', 'review', 'review.transaction_id = tx.id')
+      .leftJoin('reviews', 'review', 'review.transaction_id = tx.id')
       .where('listing.active = true')
       .groupBy('listing.id')
       .addGroupBy('listing.seller_id')
@@ -203,7 +203,7 @@ export class ListingsService {
       .addSelect(
         `(
           COALESCE(COUNT(DISTINCT tx.id), 0) * 0.6 +
-          COALESCE((SELECT AVG(rating) FROM review r WHERE r.transaction_id IN (SELECT id FROM transaction WHERE listing_id = listing.id)), 0) * 0.3 +
+          COALESCE((SELECT AVG(rating) FROM reviews r WHERE r.transaction_id IN (SELECT id FROM transactions WHERE listing_id = listing.id)), 0) * 0.3 +
           COALESCE(COUNT(DISTINCT review.id), 0) * 0.1
         )`,
         'trend_score'
