@@ -28,7 +28,7 @@ export class Message {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ type: 'enum', enum: SentBy })
+  @Column({ type: 'enum', enum: SentBy, default: SentBy.BUYER })
   sent_by: SentBy;
 
   @CreateDateColumn()
