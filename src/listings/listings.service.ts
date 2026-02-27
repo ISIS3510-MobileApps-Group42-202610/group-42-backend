@@ -11,6 +11,7 @@ import { ListingImage } from './listing-image.entity';
 import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
 import { CreateListingDto, UpdateListingDto, AddImageDto } from './listing.dto';
+import { HomeResponseDto, CategoryRankDto } from './home.dto';
 
 @Injectable()
 export class ListingsService {
@@ -152,5 +153,112 @@ export class ListingsService {
 
   async getPriceHistory(listingId: number) {
     return this.pricesRepository.find({ where: { listing_id: listingId } });
+  }
+
+  async findMyListings(userId: number) {
+    const listings = await this.listingsRepository.find({
+      where: { seller: { user_id: userId } },
+      relations: ['seller', 'seller.user', 'images', 'course'],
+      order: { created_at: 'DESC' },
+    });
+
+    return {
+      active: listings.filter((l) => l.active),
+      sold: listings.filter((l) => !l.active),
+    };
+  }
+
+  async getHomeData(): Promise<HomeResponseDto> {
+    const [recent, trending, categories] = await Promise.all([
+      this.getRecentListings(),
+      this.getTrendingListings(),
+      this.getCategories(),
+    ]);
+
+    return {
+      recent,
+      trending,
+      categories,
+    };
+  }
+
+  private async getRecentListings(): Promise<Listing[]> {
+    return this.listingsRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.images', 'images')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoinAndSelect('seller.user', 'user')
+      .leftJoinAndSelect('listing.course', 'course')
+      .where('listing.active = true')
+      .orderBy('listing.created_at', 'DESC')
+      .limit(15)
+      .getMany();
+  }
+
+  private async getTrendingListings(): Promise<Listing[]> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // First query: Get listing IDs with trend scores
+    const trendScores = await this.listingsRepository
+      .createQueryBuilder('listing')
+      .leftJoin(
+        'transactions',
+        'tx',
+        'tx.listing_id = listing.id AND tx.created_at >= :thirtyDaysAgo',
+        { thirtyDaysAgo }
+      )
+      .leftJoin('reviews', 'review', 'review.transaction_id = tx.id')
+      .where('listing.active = true')
+      .groupBy('listing.id')
+      .addGroupBy('listing.seller_id')
+      .select('listing.id', 'id')
+      .addSelect(
+        `(
+          COALESCE(COUNT(DISTINCT tx.id), 0) * 0.6 +
+          COALESCE((SELECT AVG(rating) FROM reviews r WHERE r.transaction_id IN (SELECT id FROM transactions WHERE listing_id = listing.id)), 0) * 0.3 +
+          COALESCE(COUNT(DISTINCT review.id), 0) * 0.1
+        )`,
+        'trend_score'
+      )
+      .orderBy('trend_score', 'DESC')
+      .limit(15)
+      .getRawMany();
+
+    // Second query: Fetch full entities with relations for the trending listing IDs
+    if (trendScores.length === 0) {
+      return [];
+    }
+
+    const listingIds = trendScores.map((score) => score.id);
+    return this.listingsRepository
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.images', 'images')
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoinAndSelect('seller.user', 'user')
+      .leftJoinAndSelect('listing.course', 'course')
+      .where('listing.id IN (:...ids)', { ids: listingIds })
+      .orderBy(
+        `CASE ${listingIds.map((id, index) => `WHEN listing.id = ${id} THEN ${index}`).join(' ')} ELSE ${listingIds.length} END`,
+        'ASC',
+      )
+      .getMany();
+  }
+
+  private async getCategories(): Promise<CategoryRankDto[]> {
+    const result = await this.listingsRepository
+      .createQueryBuilder('listing')
+      .select('listing.category', 'category')
+      .addSelect('COUNT(*)', 'count')
+      .where('listing.active = true')
+      .andWhere('listing.category IS NOT NULL')
+      .groupBy('listing.category')
+      .orderBy('count', 'DESC')
+      .getRawMany();
+
+    return result.map((item) => ({
+      category: item.category,
+      count: parseInt(item.count, 10),
+    }));
   }
 }

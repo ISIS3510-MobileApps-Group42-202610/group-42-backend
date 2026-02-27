@@ -9,7 +9,12 @@ import { Seller } from '../sellers/seller.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Listing, ListingImage, HistoricPrice, Seller]),
+    TypeOrmModule.forFeature([
+      Listing,
+      ListingImage,
+      HistoricPrice,
+      Seller,
+    ]),
   ],
   controllers: [ListingsController],
   providers: [ListingsService],
