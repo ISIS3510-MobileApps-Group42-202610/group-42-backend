@@ -53,6 +53,24 @@ export class UsersService {
     return { message: 'Added to wishlist' };
   }
 
+  async followUser(userId: number, followingUserId: number) {
+    if (userId === followingUserId) {
+      throw new NotFoundException(`Cannot follow yourself`);
+    }
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['following'],
+    });
+    if (!user) throw new NotFoundException(`User #${userId} not found`);
+
+    const alreadyFollowing = user.following.some((u) => u.id === followingUserId);
+    if (!alreadyFollowing) {
+      user.following.push({ id: followingUserId } as any);
+      await this.usersRepository.save(user);
+    }
+    return { message: 'User followed' };
+  }
+  
   async removeFromWishlist(userId: number, listingId: number) {
     const user = await this.usersRepository.findOne({
       where: { id: userId },

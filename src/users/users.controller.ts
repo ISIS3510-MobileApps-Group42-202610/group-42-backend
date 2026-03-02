@@ -52,6 +52,14 @@ export class UsersController {
     return this.usersService.addToWishlist(req.user.id, listingId);
   }
 
+  @Post('me/follow/:userId')
+  followUser(
+    @Request() req,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.usersService.followUser(req.user.id, userId);
+  }
+  
   @Delete('me/wishlist/:listingId')
   removeFromWishlist(
     @Request() req,

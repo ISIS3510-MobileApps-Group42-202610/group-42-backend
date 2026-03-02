@@ -68,4 +68,13 @@ export class User {
     inverseJoinColumn: { name: 'listing_id', referencedColumnName: 'id' },
   })
   wishlist: Listing[];
+
+  @ManyToMany(() => User)
+  @JoinTable({
+    name: 'following',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'following_user_id', referencedColumnName: 'id' },
+  })
+  following: User[];
+  
 }
