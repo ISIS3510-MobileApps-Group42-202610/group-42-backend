@@ -3,14 +3,21 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Listing } from './listing.entity';
 import { ListingImage } from './listing-image.entity';
 import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
-import { CreateListingDto, UpdateListingDto, AddImageDto } from './listing.dto';
+import {
+  CreateListingDto,
+  UpdateListingDto,
+  AddImageDto,
+  CreateListingImageDto,
+  UpdateListingImageDto,
+} from './listing.dto';
 import { HomeResponseDto, CategoryRankDto } from './home.dto';
 
 @Injectable()
@@ -31,11 +38,13 @@ export class ListingsService {
     if (category) where.category = category;
     if (condition) where.condition = condition;
 
-    return this.listingsRepository.find({
+    const listings = await this.listingsRepository.find({
       where,
       relations: ['seller', 'seller.user', 'images', 'course'],
       order: { created_at: 'DESC' },
     });
+
+    return listings.map((listing) => this.sortListingImages(listing));
   }
 
   async findOne(id: number) {
@@ -44,7 +53,7 @@ export class ListingsService {
       relations: ['seller', 'seller.user', 'images', 'course', 'priceHistory'],
     });
     if (!listing) throw new NotFoundException(`Listing #${id} not found`);
-    return listing;
+    return this.sortListingImages(listing);
   }
 
   async create(userId: number, dto: CreateListingDto) {
@@ -53,24 +62,45 @@ export class ListingsService {
     });
     if (!seller) throw new ForbiddenException('User is not a seller');
 
-    const listing = this.listingsRepository.create({
-      ...dto,
-      seller_id: seller.id,
-    });
+    const { images, ...listingPayload } = dto;
+    const normalizedImages = this.normalizeImages(images);
 
-    await this.listingsRepository.save(listing);
+    const listingId = await this.listingsRepository.manager.transaction(
+      async (manager) => {
+        const listingRepo = manager.getRepository(Listing);
+        const priceRepo = manager.getRepository(HistoricPrice);
+        const imageRepo = manager.getRepository(ListingImage);
 
-    // Record initial price in history
-    await this.pricesRepository.save({
-      listing_id: listing.id,
-      start_date: new Date(),
-    });
+        const listing = listingRepo.create({
+          ...listingPayload,
+          seller_id: seller.id,
+        });
+        const savedListing = await listingRepo.save(listing);
 
-    return listing;
+        await priceRepo.save({
+          listing_id: savedListing.id,
+          start_date: new Date(),
+        });
+
+        const imageEntities = normalizedImages.map((image) =>
+          imageRepo.create({
+            ...image,
+            listing_id: savedListing.id,
+          }),
+        );
+
+        await imageRepo.save(imageEntities);
+        return savedListing.id;
+      },
+    );
+
+    return this.findOne(listingId);
   }
 
   async update(id: number, userId: number, dto: UpdateListingDto) {
-    const listing = await this.findOne(id);
+    const listing = await this.listingsRepository.findOne({ where: { id } });
+    if (!listing) throw new NotFoundException(`Listing #${id} not found`);
+
     const seller = await this.sellersRepository.findOne({
       where: { user_id: userId },
     });
@@ -79,19 +109,47 @@ export class ListingsService {
       throw new ForbiddenException('Not your listing');
     }
 
-    // If price changed, close old price record and open a new one
-    if (dto.selling_price && dto.selling_price !== listing.selling_price) {
-      await this.pricesRepository.update(
-        { listing_id: id, final_date: null as any },
-        { final_date: new Date() },
-      );
-      await this.pricesRepository.save({
-        listing_id: id,
-        start_date: new Date(),
-      });
-    }
+    const {
+      images,
+      replace_images = false,
+      removed_image_ids = [],
+      ...listingPayload
+    } = dto;
 
-    await this.listingsRepository.update(id, dto);
+    await this.listingsRepository.manager.transaction(async (manager) => {
+      const listingRepo = manager.getRepository(Listing);
+      const priceRepo = manager.getRepository(HistoricPrice);
+
+      if (
+        dto.selling_price !== undefined &&
+        dto.selling_price !== listing.selling_price
+      ) {
+        await priceRepo.update(
+          { listing_id: id, final_date: null as any },
+          { final_date: new Date() },
+        );
+
+        await priceRepo.save({
+          listing_id: id,
+          start_date: new Date(),
+        });
+      }
+
+      if (Object.keys(listingPayload).length > 0) {
+        await listingRepo.update(id, listingPayload);
+      }
+
+      if (images || removed_image_ids.length > 0) {
+        await this.syncListingImages(
+          manager,
+          id,
+          images ?? [],
+          replace_images,
+          removed_image_ids,
+        );
+      }
+    });
+
     return this.findOne(id);
   }
 
@@ -119,18 +177,31 @@ export class ListingsService {
       throw new ForbiddenException('Not your listing');
     }
 
-    if (dto.is_primary) {
-      await this.imagesRepository.update(
-        { listing_id: listingId },
-        { is_primary: false },
-      );
-    }
+    return this.imagesRepository.manager.transaction(async (manager) => {
+      const imageRepo = manager.getRepository(ListingImage);
+      const currentImages = await imageRepo.find({
+        where: { listing_id: listingId },
+      });
 
-    const image = this.imagesRepository.create({
-      ...dto,
-      listing_id: listingId,
+      if (dto.is_primary) {
+        await imageRepo.update({ listing_id: listingId }, { is_primary: false });
+      }
+
+      const sortOrder =
+        dto.sort_order !== undefined
+          ? dto.sort_order
+          : this.getNextSortOrder(currentImages);
+
+      const image = imageRepo.create({
+        ...dto,
+        sort_order: sortOrder,
+        listing_id: listingId,
+      });
+
+      const savedImage = await imageRepo.save(image);
+      await this.reconcilePrimaryAndOrder(manager, listingId);
+      return savedImage;
     });
-    return this.imagesRepository.save(image);
   }
 
   async removeImage(imageId: number, userId: number) {
@@ -147,8 +218,217 @@ export class ListingsService {
       throw new ForbiddenException('Not your listing');
     }
 
-    await this.imagesRepository.remove(image);
+    await this.imagesRepository.manager.transaction(async (manager) => {
+      const imageRepo = manager.getRepository(ListingImage);
+      await imageRepo.remove(image);
+      await this.reconcilePrimaryAndOrder(manager, image.listing_id);
+    });
+
     return { message: 'Image removed' };
+  }
+
+  private normalizeImages(images: CreateListingImageDto[]) {
+    if (!images || images.length === 0) {
+      throw new BadRequestException('At least one image is required');
+    }
+
+    const urls = new Set<string>();
+    const normalized = images.map((image, index) => {
+      if (urls.has(image.url)) {
+        throw new BadRequestException('Duplicate image URLs are not allowed');
+      }
+
+      urls.add(image.url);
+      return {
+        url: image.url,
+        is_primary: image.is_primary ?? false,
+        sort_order: image.sort_order ?? index,
+      };
+    });
+
+    return this.normalizePrimaryAndOrder(normalized);
+  }
+
+  private async syncListingImages(
+    manager: EntityManager,
+    listingId: number,
+    images: UpdateListingImageDto[],
+    replaceImages: boolean,
+    removedImageIds: number[],
+  ) {
+    const imageRepo = manager.getRepository(ListingImage);
+    const existing = await imageRepo.find({ where: { listing_id: listingId } });
+    const existingById = new Map(existing.map((image) => [image.id, image]));
+
+    if (replaceImages) {
+      if (!images.length) {
+        throw new BadRequestException(
+          'A listing must contain at least one image when replacing images',
+        );
+      }
+
+      await imageRepo.delete({ listing_id: listingId });
+      const normalized = this.normalizePrimaryAndOrder(
+        images.map((image, index) => ({
+          url: image.url,
+          is_primary: image.is_primary ?? false,
+          sort_order: image.sort_order ?? index,
+        })),
+      );
+
+      await imageRepo.save(
+        normalized.map((image) =>
+          imageRepo.create({
+            ...image,
+            listing_id: listingId,
+          }),
+        ),
+      );
+      return;
+    }
+
+    for (const imageId of removedImageIds) {
+      if (!existingById.has(imageId)) {
+        throw new BadRequestException(
+          `Image #${imageId} does not belong to listing #${listingId}`,
+        );
+      }
+    }
+
+    if (removedImageIds.length > 0) {
+      await imageRepo.delete(removedImageIds);
+      removedImageIds.forEach((imageId) => existingById.delete(imageId));
+    }
+
+    for (const image of images) {
+      if (image.id) {
+        const current = existingById.get(image.id);
+        if (!current) {
+          throw new BadRequestException(
+            `Image #${image.id} does not belong to listing #${listingId}`,
+          );
+        }
+
+        current.url = image.url;
+        if (image.is_primary !== undefined) {
+          current.is_primary = image.is_primary;
+        }
+        if (image.sort_order !== undefined) {
+          current.sort_order = image.sort_order;
+        }
+
+        await imageRepo.save(current);
+        continue;
+      }
+
+      const createdImage = await imageRepo.save(
+        imageRepo.create({
+          listing_id: listingId,
+          url: image.url,
+          is_primary: image.is_primary ?? false,
+          sort_order:
+            image.sort_order ??
+            this.getNextSortOrder(Array.from(existingById.values())),
+        }),
+      );
+
+      existingById.set(createdImage.id, createdImage);
+    }
+
+    await this.reconcilePrimaryAndOrder(manager, listingId);
+  }
+
+  private normalizePrimaryAndOrder(
+    images: Array<{ url: string; is_primary: boolean; sort_order: number }>,
+  ) {
+    const urlSet = new Set<string>();
+    for (const image of images) {
+      if (urlSet.has(image.url)) {
+        throw new BadRequestException('Duplicate image URLs are not allowed');
+      }
+      urlSet.add(image.url);
+    }
+
+    const primaryCount = images.filter((image) => image.is_primary).length;
+    if (primaryCount > 1) {
+      throw new BadRequestException('Only one image can be primary');
+    }
+
+    const ordered = [...images]
+      .map((image, originalIndex) => ({ ...image, originalIndex }))
+      .sort((a, b) => {
+        if (a.sort_order === b.sort_order) {
+          return a.originalIndex - b.originalIndex;
+        }
+        return a.sort_order - b.sort_order;
+      })
+      .map((image, index) => ({
+        url: image.url,
+        is_primary: image.is_primary,
+        sort_order: index,
+      }));
+
+    if (!ordered.some((image) => image.is_primary) && ordered.length > 0) {
+      ordered[0].is_primary = true;
+    }
+
+    return ordered;
+  }
+
+  private async reconcilePrimaryAndOrder(manager: EntityManager, listingId: number) {
+    const imageRepo = manager.getRepository(ListingImage);
+    const currentImages = await imageRepo.find({ where: { listing_id: listingId } });
+
+    if (currentImages.length === 0) {
+      throw new BadRequestException('A listing must have at least one image');
+    }
+
+    const ordered = [...currentImages].sort((a, b) => {
+      if (a.sort_order === b.sort_order) {
+        return a.id - b.id;
+      }
+      return a.sort_order - b.sort_order;
+    });
+
+    const urlSet = new Set<string>();
+    for (const image of ordered) {
+      if (urlSet.has(image.url)) {
+        throw new BadRequestException('Duplicate image URLs are not allowed');
+      }
+      urlSet.add(image.url);
+    }
+
+    const primaryCount = ordered.filter((image) => image.is_primary).length;
+    if (primaryCount > 1) {
+      throw new BadRequestException('Only one image can be primary');
+    }
+
+    if (primaryCount === 0) {
+      ordered[0].is_primary = true;
+    }
+
+    ordered.forEach((image, index) => {
+      image.sort_order = index;
+    });
+
+    await imageRepo.save(ordered);
+  }
+
+  private getNextSortOrder(images: Pick<ListingImage, 'sort_order'>[]) {
+    if (images.length === 0) return 0;
+    return Math.max(...images.map((image) => image.sort_order ?? 0)) + 1;
+  }
+
+  private sortListingImages(listing: Listing) {
+    if (!listing.images || listing.images.length === 0) {
+      return listing;
+    }
+
+    listing.images = [...listing.images].sort(
+      (a, b) => a.sort_order - b.sort_order,
+    );
+
+    return listing;
   }
 
   async getPriceHistory(listingId: number) {
