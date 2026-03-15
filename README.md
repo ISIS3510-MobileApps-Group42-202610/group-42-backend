@@ -62,6 +62,11 @@ All protected routes require: `Authorization: Bearer <token>`
 | POST | `/api/v1/auth/register` | Register a new user |
 | POST | `/api/v1/auth/login` | Login and get JWT |
 
+### Uploads
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/uploads/cloudinary-signature` | Generate a Cloudinary signed-upload signature |
+
 **Register body:**
 ```json
 {
@@ -257,3 +262,61 @@ CI runs automatically on every push and pull request via GitHub Actions (`.githu
 - **Validation:** class-validator + class-transformer
 - **Testing:** Jest + ts-jest
 - **CI:** GitHub Actions
+
+---
+
+## ☁️ Cloudinary Signed Uploads (Mini Guide)
+
+### 1. Configure variables
+
+Create `.env` from `.env.example` and set real values:
+
+```bash
+cp .env.example .env
+```
+
+Required variables:
+
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_UPLOAD_FOLDER` (optional, default folder for signed uploads)
+
+Alternative (also supported):
+
+- `CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>`
+
+### 2. Run backend
+
+```bash
+npm install
+npm run start:dev
+```
+
+### 3. Test signature endpoint with curl
+
+This route must keep this exact path for frontend compatibility:
+
+- `POST /api/v1/uploads/cloudinary-signature`
+
+Example:
+
+```bash
+curl -X POST "http://localhost:3000/api/v1/uploads/cloudinary-signature" \
+  -H "Content-Type: application/json" \
+  -d '{"folder":"unimarket/listings","public_id":"listing_123"}'
+```
+
+Expected response shape:
+
+```json
+{
+  "cloudName": "...",
+  "cloud_name": "...",
+  "apiKey": "...",
+  "api_key": "...",
+  "timestamp": "1710000000",
+  "signature": "...",
+  "folder": "unimarket/listings"
+}
+```

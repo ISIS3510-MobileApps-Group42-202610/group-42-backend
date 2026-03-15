@@ -11,6 +11,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { CoursesModule } from './courses/courses.module';
 import { SellersModule } from './sellers/sellers.module';
 import { AuthModule } from './auth/auth.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 const stage = process.env.STAGE ?? process.env.NODE_ENV ?? 'dev';
 const isProd = stage === 'prod' || stage === 'production';
@@ -40,6 +41,7 @@ const isProd = stage === 'prod' || stage === 'production';
     CoursesModule,
     SellersModule,
     AuthModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
