@@ -3,12 +3,12 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { QueryFailedError, MoreThan, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User } from '../users/user.entity';
 import { Seller } from '../sellers/seller.entity';
 import {
@@ -30,6 +30,21 @@ export class AuthService {
     private jwtService: JwtService,
     private emailService: EmailService,
   ) {}
+
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  /** Generates a random 8-character alphanumeric code (uppercase). */
+  private generateResetCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+    let code = '';
+    const bytes = crypto.randomBytes(8);
+    for (let i = 0; i < 8; i++) {
+      code += chars[bytes[i] % chars.length];
+    }
+    return code;
+  }
+
+  // ── register ───────────────────────────────────────────────────────────────
 
   async register(dto: RegisterDto) {
     const existing = await this.usersRepository.findOne({
@@ -59,6 +74,8 @@ export class AuthService {
     return this.signToken(user);
   }
 
+  // ── login ──────────────────────────────────────────────────────────────────
+
   async login(dto: LoginDto) {
     const user = await this.usersRepository.findOne({
       where: { email: dto.email },
@@ -71,60 +88,72 @@ export class AuthService {
     return this.signToken(user);
   }
 
+  // ── forgot password ────────────────────────────────────────────────────────
+
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.usersRepository.findOne({
       where: { email: dto.email },
     });
 
     if (user) {
-      const token = this.jwtService.sign(
-        { sub: user.id, email: user.email, purpose: 'password_reset' },
-        {
-          expiresIn: parseInt(
-            process.env.RESET_PASSWORD_EXPIRES_IN || '900',
-            10,
-          ),
-        },
+      const code = this.generateResetCode();
+      const expiresInSeconds = parseInt(
+        process.env.RESET_PASSWORD_EXPIRES_IN || '900',
+        10,
       );
 
-      // Send the reset token via email
-      await this.emailService.sendPasswordReset(user.email, token);
+      // Store hashed code + expiration on the user row
+      user.resetCode = await bcrypt.hash(code, 10);
+      user.resetCodeExpiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+      await this.usersRepository.save(user);
+
+      // Send the plain-text code via email
+      await this.emailService.sendPasswordReset(user.email, code);
     }
 
-    // Keep response generic to avoid leaking whether an email exists.
+    // Generic response to avoid leaking whether the email exists
     return {
       message:
         'If that email is registered, password reset instructions were sent.',
     };
   }
 
+  // ── reset password ─────────────────────────────────────────────────────────
+
   async resetPassword(dto: ResetPasswordDto) {
-    let payload: { sub: number; email: string; purpose?: string };
-
-    try {
-      payload = this.jwtService.verify(dto.token, {
-        secret: process.env.JWT_SECRET || 'secret',
-      });
-    } catch {
-      throw new UnauthorizedException('Invalid or expired reset token');
-    }
-
-    if (payload.purpose !== 'password_reset') {
-      throw new BadRequestException('Invalid reset token');
-    }
-
-    const user = await this.usersRepository.findOne({
-      where: { id: payload.sub, email: payload.email },
+    // Only check users with a non-expired reset code
+    const candidates = await this.usersRepository.find({
+      where: {
+        resetCodeExpiresAt: MoreThan(new Date()),
+      },
     });
-    if (!user) {
-      throw new UnauthorizedException('Invalid or expired reset token');
+
+    let matchedUser: User | null = null;
+    const normalizedToken = dto.token.toUpperCase().trim();
+
+    for (const user of candidates) {
+      if (!user.resetCode) continue;
+      const valid = await bcrypt.compare(normalizedToken, user.resetCode);
+      if (valid) {
+        matchedUser = user;
+        break;
+      }
     }
 
-    user.passwordHash = await bcrypt.hash(dto.new_password, 10);
-    await this.usersRepository.save(user);
+    if (!matchedUser) {
+      throw new UnauthorizedException('Invalid or expired reset code');
+    }
+
+    // Update password and clear the reset fields
+    matchedUser.passwordHash = await bcrypt.hash(dto.new_password, 10);
+    matchedUser.resetCode = null;
+    matchedUser.resetCodeExpiresAt = null;
+    await this.usersRepository.save(matchedUser);
 
     return { message: 'Password reset successfully' };
   }
+
+  // ── delete account ─────────────────────────────────────────────────────────
 
   async deleteAccount(userId: number, dto: DeleteAccountDto) {
     const user = await this.usersRepository.findOne({
@@ -169,6 +198,8 @@ export class AuthService {
 
     return { message: 'Account deleted successfully' };
   }
+
+  // ── token ──────────────────────────────────────────────────────────────────
 
   private signToken(user: User) {
     const payload = { sub: user.id, email: user.email };

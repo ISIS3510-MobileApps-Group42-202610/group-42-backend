@@ -61,6 +61,12 @@ export class User {
   @OneToMany(() => Message, (message) => message.seller)
   receivedMessages: Message[];
 
+  @Column({ type: 'varchar', nullable: true, default: null })
+  resetCode: string | null;
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  resetCodeExpiresAt: Date | null;
+
   @ManyToMany(() => Listing)
   @JoinTable({
     name: 'wishlist',
@@ -73,8 +79,10 @@ export class User {
   @JoinTable({
     name: 'following',
     joinColumn: { name: 'user_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'following_user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: {
+      name: 'following_user_id',
+      referencedColumnName: 'id',
+    },
   })
   following: User[];
-  
 }

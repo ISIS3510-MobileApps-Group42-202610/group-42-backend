@@ -1,11 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import {
-  BadRequestException,
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { QueryFailedError } from 'typeorm';
 import { AuthService } from '../../src/auth/auth.service';
@@ -13,7 +9,6 @@ import { User } from '../../src/users/user.entity';
 import { Seller } from '../../src/sellers/seller.entity';
 import { EmailService } from '../../src/email/email.service';
 
-// Mock bcrypt so tests don't do real hashing (slow)
 jest.mock('bcrypt');
 const mockedBcrypt = bcrypt as unknown as {
   hash: jest.Mock;
@@ -29,14 +24,18 @@ const mockUser: Partial<User> = {
   email: 'juan@uni.edu',
   passwordHash: 'hashed_password',
   is_seller: false,
+  resetCode: null,
+  resetCodeExpiresAt: null,
 };
 
 const mockUserRepo = {
   findOne: jest.fn(),
+  find: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
   query: jest.fn(),
   remove: jest.fn(),
+  createQueryBuilder: jest.fn(),
 };
 
 const mockSellerRepo = {
@@ -99,7 +98,6 @@ describe('AuthService', () => {
 
     it('should throw ConflictException if email already exists', async () => {
       mockUserRepo.findOne.mockResolvedValue(mockUser);
-
       await expect(service.register(dto)).rejects.toThrow(ConflictException);
     });
 
@@ -116,7 +114,6 @@ describe('AuthService', () => {
       mockSellerRepo.save.mockResolvedValue({ id: 1, user_id: 1 });
 
       await service.register({ ...dto, is_seller: true });
-
       expect(mockSellerRepo.save).toHaveBeenCalled();
     });
 
@@ -127,7 +124,6 @@ describe('AuthService', () => {
       mockUserRepo.save.mockResolvedValue({ ...mockUser });
 
       await service.register(dto);
-
       expect(mockSellerRepo.save).not.toHaveBeenCalled();
     });
   });
@@ -142,21 +138,18 @@ describe('AuthService', () => {
       bcryptCompare.mockResolvedValue(true);
 
       const result = await service.login(dto);
-
       expect(result.access_token).toBe('mock.jwt.token');
       expect(result.user.email).toBe('juan@uni.edu');
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
       mockUserRepo.findOne.mockResolvedValue(null);
-
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if password is wrong', async () => {
       mockUserRepo.findOne.mockResolvedValue(mockUser);
       bcryptCompare.mockResolvedValue(false);
-
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
   });
@@ -164,41 +157,32 @@ describe('AuthService', () => {
   // ── forgotPassword ─────────────────────────────────────────────────────────
 
   describe('forgotPassword', () => {
-    it('should return a generic message and send email when user exists', async () => {
-      mockUserRepo.findOne.mockResolvedValue(mockUser);
+    it('should generate a code, save it hashed, and send email when user exists', async () => {
+      mockUserRepo.findOne.mockResolvedValue({ ...mockUser });
+      bcryptHash.mockResolvedValue('hashed_code');
 
       const result = await service.forgotPassword({ email: 'juan@uni.edu' });
 
-      expect(result).toEqual({
-        message:
-          'If that email is registered, password reset instructions were sent.',
-      });
-      expect(mockJwtService.sign).toHaveBeenCalledWith(
+      expect(result.message).toContain('password reset instructions');
+      expect(bcryptHash).toHaveBeenCalled();
+      expect(mockUserRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          sub: mockUser.id,
-          email: mockUser.email,
-          purpose: 'password_reset',
+          resetCode: 'hashed_code',
+          resetCodeExpiresAt: expect.any(Date),
         }),
-        expect.any(Object),
       );
       expect(mockEmailService.sendPasswordReset).toHaveBeenCalledWith(
         'juan@uni.edu',
-        'mock.jwt.token',
+        expect.stringMatching(/^[A-Z2-9]{8}$/),
       );
     });
 
     it('should return a generic message and not send email when user does not exist', async () => {
       mockUserRepo.findOne.mockResolvedValue(null);
 
-      const result = await service.forgotPassword({
-        email: 'missing@uni.edu',
-      });
+      const result = await service.forgotPassword({ email: 'missing@uni.edu' });
 
-      expect(result).toEqual({
-        message:
-          'If that email is registered, password reset instructions were sent.',
-      });
-      expect(mockJwtService.sign).not.toHaveBeenCalled();
+      expect(result.message).toContain('password reset instructions');
       expect(mockEmailService.sendPasswordReset).not.toHaveBeenCalled();
     });
   });
@@ -206,43 +190,50 @@ describe('AuthService', () => {
   // ── resetPassword ──────────────────────────────────────────────────────────
 
   describe('resetPassword', () => {
-    const dto = { token: 'valid-token', new_password: 'newpass123' };
+    const dto = { token: 'ABC12345', new_password: 'newpass123' };
 
-    it('should update password when token is valid', async () => {
-      mockJwtService.verify.mockReturnValue({
-        sub: 1,
-        email: 'juan@uni.edu',
-        purpose: 'password_reset',
-      });
-      mockUserRepo.findOne.mockResolvedValue({ ...mockUser });
+    it('should update password when code is valid', async () => {
+      const userWithCode = {
+        ...mockUser,
+        resetCode: 'hashed_code',
+        resetCodeExpiresAt: new Date(Date.now() + 60000),
+      };
+      mockUserRepo.find.mockResolvedValue([userWithCode]);
+      bcryptCompare.mockResolvedValueOnce(true); // code match
       bcryptHash.mockResolvedValue('new_hash');
 
       const result = await service.resetPassword(dto);
 
       expect(result).toEqual({ message: 'Password reset successfully' });
-      expect(bcryptHash).toHaveBeenCalledWith('newpass123', 10);
-      expect(mockUserRepo.save).toHaveBeenCalled();
+      expect(mockUserRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          passwordHash: 'new_hash',
+          resetCode: null,
+          resetCodeExpiresAt: null,
+        }),
+      );
     });
 
-    it('should throw UnauthorizedException for invalid token', async () => {
-      mockJwtService.verify.mockImplementation(() => {
-        throw new Error('invalid');
-      });
+    it('should throw UnauthorizedException for invalid code', async () => {
+      mockUserRepo.find.mockResolvedValue([
+        {
+          ...mockUser,
+          resetCode: 'hashed_code',
+          resetCodeExpiresAt: new Date(Date.now() + 60000),
+        },
+      ]);
+      bcryptCompare.mockResolvedValueOnce(false);
 
       await expect(service.resetPassword(dto)).rejects.toThrow(
         UnauthorizedException,
       );
     });
 
-    it('should throw BadRequestException for wrong token purpose', async () => {
-      mockJwtService.verify.mockReturnValue({
-        sub: 1,
-        email: 'juan@uni.edu',
-        purpose: 'login',
-      });
+    it('should throw UnauthorizedException when no candidates exist', async () => {
+      mockUserRepo.find.mockResolvedValue([]);
 
       await expect(service.resetPassword(dto)).rejects.toThrow(
-        BadRequestException,
+        UnauthorizedException,
       );
     });
   });
@@ -268,7 +259,6 @@ describe('AuthService', () => {
     it('should throw UnauthorizedException when password is invalid', async () => {
       mockUserRepo.findOne.mockResolvedValue({ ...mockUser });
       bcryptCompare.mockResolvedValue(false);
-
       await expect(service.deleteAccount(1, dto)).rejects.toThrow(
         UnauthorizedException,
       );
@@ -285,7 +275,6 @@ describe('AuthService', () => {
           new Error('fk_violation'),
         ),
       );
-
       await expect(service.deleteAccount(1, dto)).rejects.toThrow(
         ConflictException,
       );
