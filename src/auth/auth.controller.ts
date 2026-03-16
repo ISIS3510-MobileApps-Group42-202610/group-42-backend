@@ -26,6 +26,7 @@ export class AuthController {
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
+    console.log('DTO recibido:', JSON.stringify(dto));
     return this.authService.register(dto);
   }
 
