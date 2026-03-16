@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsInt,
   IsBoolean,
+  IsNotEmpty,
 } from 'class-validator';
 
 export class RegisterDto {
@@ -39,5 +40,26 @@ export class LoginDto {
   email: string;
 
   @IsString()
+  password: string;
+}
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @IsString()
+  @MinLength(6)
+  new_password: string;
+}
+
+export class DeleteAccountDto {
+  @IsString()
+  @MinLength(6)
   password: string;
 }
