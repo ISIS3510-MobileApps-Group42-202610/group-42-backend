@@ -11,6 +11,7 @@ import { QueryFailedError } from 'typeorm';
 import { AuthService } from '../../src/auth/auth.service';
 import { User } from '../../src/users/user.entity';
 import { Seller } from '../../src/sellers/seller.entity';
+import { EmailService } from '../../src/email/email.service';
 
 // Mock bcrypt so tests don't do real hashing (slow)
 jest.mock('bcrypt');
@@ -50,6 +51,10 @@ const mockJwtService = {
   verify: jest.fn(),
 };
 
+const mockEmailService = {
+  sendPasswordReset: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('AuthService', () => {
   let service: AuthService;
 
@@ -60,6 +65,7 @@ describe('AuthService', () => {
         { provide: getRepositoryToken(User), useValue: mockUserRepo },
         { provide: getRepositoryToken(Seller), useValue: mockSellerRepo },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
@@ -158,7 +164,7 @@ describe('AuthService', () => {
   // ── forgotPassword ─────────────────────────────────────────────────────────
 
   describe('forgotPassword', () => {
-    it('should return a generic message and sign a reset token when user exists', async () => {
+    it('should return a generic message and send email when user exists', async () => {
       mockUserRepo.findOne.mockResolvedValue(mockUser);
 
       const result = await service.forgotPassword({ email: 'juan@uni.edu' });
@@ -175,18 +181,25 @@ describe('AuthService', () => {
         }),
         expect.any(Object),
       );
+      expect(mockEmailService.sendPasswordReset).toHaveBeenCalledWith(
+        'juan@uni.edu',
+        'mock.jwt.token',
+      );
     });
 
-    it('should return a generic message and not sign a token when user does not exist', async () => {
+    it('should return a generic message and not send email when user does not exist', async () => {
       mockUserRepo.findOne.mockResolvedValue(null);
 
-      const result = await service.forgotPassword({ email: 'missing@uni.edu' });
+      const result = await service.forgotPassword({
+        email: 'missing@uni.edu',
+      });
 
       expect(result).toEqual({
         message:
           'If that email is registered, password reset instructions were sent.',
       });
       expect(mockJwtService.sign).not.toHaveBeenCalled();
+      expect(mockEmailService.sendPasswordReset).not.toHaveBeenCalled();
     });
   });
 

@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from '../users/user.entity';
 import { Seller } from '../sellers/seller.entity';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Seller } from '../sellers/seller.entity';
         expiresIn: parseInt(process.env.JWT_EXPIRES_IN || '604800', 10),
       },
     }),
+    EmailModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

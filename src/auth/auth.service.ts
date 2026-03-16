@@ -18,6 +18,7 @@ import {
   ResetPasswordDto,
   DeleteAccountDto,
 } from './auth.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
     @InjectRepository(Seller)
     private sellersRepository: Repository<Seller>,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -75,8 +77,7 @@ export class AuthService {
     });
 
     if (user) {
-      // Generate a short-lived reset token so the flow can be wired to email delivery.
-      this.jwtService.sign(
+      const token = this.jwtService.sign(
         { sub: user.id, email: user.email, purpose: 'password_reset' },
         {
           expiresIn: parseInt(
@@ -85,6 +86,9 @@ export class AuthService {
           ),
         },
       );
+
+      // Send the reset token via email
+      await this.emailService.sendPasswordReset(user.email, token);
     }
 
     // Keep response generic to avoid leaking whether an email exists.
@@ -144,9 +148,10 @@ export class AuthService {
         'DELETE FROM following WHERE user_id = $1 OR following_user_id = $1',
         [user.id],
       );
-      await this.usersRepository.query('DELETE FROM wishlist WHERE user_id = $1', [
-        user.id,
-      ]);
+      await this.usersRepository.query(
+        'DELETE FROM wishlist WHERE user_id = $1',
+        [user.id],
+      );
 
       if (seller) {
         await this.sellersRepository.remove(seller);
