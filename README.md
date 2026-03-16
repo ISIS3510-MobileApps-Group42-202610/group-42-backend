@@ -8,10 +8,10 @@ A NestJS REST API for a university marketplace — buy/sell textbooks, notes, an
 
 ```
 src/
-├── auth/           # JWT authentication (register/login, bcrypt hashing)
-├── users/          # User profiles, wishlist, purchase history
+├── auth/           # JWT auth, password recovery, account deletion
+├── users/          # User profiles, wishlist, following, purchase history
 ├── sellers/        # Seller profiles (auto-created on register)
-├── listings/       # Product listings, images, price history
+├── listings/       # Product listings, home feed, images, price history
 ├── transactions/   # Purchase flow
 ├── reviews/        # Post-purchase reviews (updates seller avg_rating)
 ├── messages/       # Bidirectional Buyer ↔ Seller chat
@@ -61,6 +61,9 @@ All protected routes require: `Authorization: Bearer <token>`
 |--------|----------|-------------|
 | POST | `/api/v1/auth/register` | Register a new user |
 | POST | `/api/v1/auth/login` | Login and get JWT |
+| POST | `/api/v1/auth/forgot-password` | Send a password reset code to email |
+| POST | `/api/v1/auth/reset-password` | Reset password using the emailed code |
+| DELETE | `/api/v1/auth/account` 🔒 | Delete the authenticated account |
 
 **Register body:**
 ```json
@@ -74,6 +77,38 @@ All protected routes require: `Authorization: Bearer <token>`
 }
 ```
 
+**Login body:**
+```json
+{
+  "email": "juan@uni.edu",
+  "password": "secret123"
+}
+```
+
+**Forgot password body:**
+```json
+{
+  "email": "juan@uni.edu"
+}
+```
+
+**Reset password body:**
+```json
+{
+  "token": "ABCD2345",
+  "new_password": "newSecret123"
+}
+```
+
+**Delete account body:**
+```json
+{
+  "password": "secret123"
+}
+```
+
+> `forgot-password` always returns a generic success message to avoid revealing whether an email is registered.
+
 ---
 
 ### Users 🔒
@@ -84,9 +119,27 @@ All protected routes require: `Authorization: Bearer <token>`
 | PATCH | `/api/v1/users/me` | Update own profile |
 | GET | `/api/v1/users/me/wishlist` | Get wishlist |
 | POST | `/api/v1/users/me/wishlist/:listingId` | Add to wishlist |
+| POST | `/api/v1/users/me/follow/:userId` | Follow another user |
 | DELETE | `/api/v1/users/me/wishlist/:listingId` | Remove from wishlist |
 | GET | `/api/v1/users/me/purchases` | Purchase history |
 | GET | `/api/v1/users/:id` | Get user by ID |
+| DELETE | `/api/v1/users/:id` | Delete a user by ID |
+
+**Update profile body (example):**
+```json
+{
+  "name": "Juan David",
+  "last_name": "García",
+  "semester": 5,
+  "profile_pic": "https://example.com/avatar.jpg"
+}
+```
+
+**Follow usage:**
+
+`POST /api/v1/users/me/follow/12`
+
+> You cannot follow yourself. Repeating the same follow request is safe and keeps the relation once.
 
 ---
 
@@ -103,6 +156,8 @@ All protected routes require: `Authorization: Bearer <token>`
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/listings` | Browse listings (filter: `?category=&condition=`) |
+| GET | `/api/v1/listings/home/ranking` | Home feed with recent, trending, and category ranking data |
+| GET | `/api/v1/listings/my` 🔒 | Get my listings grouped into `active` and `sold` |
 | GET | `/api/v1/listings/:id` | Get listing detail |
 | POST | `/api/v1/listings` 🔒 | Create listing (sellers only) |
 | PATCH | `/api/v1/listings/:id` 🔒 | Update listing |
@@ -126,6 +181,34 @@ All protected routes require: `Authorization: Bearer <token>`
 
 **Categories:** `textbook | notes | supplies | electronics | other`
 **Conditions:** `new | like_new | good | fair | poor`
+
+**Update listing body (example):**
+```json
+{
+  "selling_price": 60000,
+  "condition": "like_new",
+  "active": true
+}
+```
+
+**Add image body:**
+```json
+{
+  "url": "https://example.com/listings/calculus-cover.jpg",
+  "is_primary": true
+}
+```
+
+**Home feed usage:**
+
+`GET /api/v1/listings/home/ranking`
+
+Returns:
+- `recent`: latest active listings
+- `trending`: active listings ordered by marketplace activity score
+- `categories`: active listing counts grouped by category
+
+> `GET /api/v1/listings/my` requires auth and returns `{ active: Listing[], sold: Listing[] }` for the current seller.
 
 ---
 
@@ -216,13 +299,22 @@ Seller send body:
 | POST | `/api/v1/courses` 🔒 | Create a course |
 | DELETE | `/api/v1/courses/:id` 🔒 | Delete a course |
 
+**Create course body:**
+```json
+{
+  "code": "MAT101",
+  "name": "Cálculo Diferencial",
+  "faculty": "Engineering"
+}
+```
+
 ---
 
 ## 🗄️ Database Schema Summary
 
 | Table | Key Relations |
 |-------|--------------|
-| `users` | One → One `sellers`, Many ↔ Many `listings` (wishlist) |
+| `users` | One → One `sellers`, Many ↔ Many `listings` (wishlist), Many ↔ Many `users` (following) |
 | `sellers` | One `user`, Many `listings`, Many `transactions` |
 | `listings` | Belongs to `seller`, optional `course`, has `listing_images`, `historic_prices` |
 | `transactions` | Buyer (`user`) + Seller + Listing → One `review` |
@@ -243,7 +335,7 @@ npm run test
 npm run test:cov
 ```
 
-Tests use fully mocked repositories — no database connection required. Coverage spans all 7 services: Auth, Users, Sellers, Listings, Transactions, Reviews, Messages.
+Tests use fully mocked repositories — no database connection required. Coverage spans Auth, Users, Sellers, Listings, Transactions, Reviews, Messages, and Courses modules/services.
 
 CI runs automatically on every push and pull request via GitHub Actions (`.github/workflows/ci.yml`).
 
@@ -251,7 +343,7 @@ CI runs automatically on every push and pull request via GitHub Actions (`.githu
 
 ## 🔧 Tech Stack
 
-- **Framework:** NestJS 10
+- **Framework:** NestJS 11
 - **ORM:** TypeORM 0.3 (PostgreSQL)
 - **Auth:** JWT (passport-jwt) + Bcrypt password hashing
 - **Validation:** class-validator + class-transformer
