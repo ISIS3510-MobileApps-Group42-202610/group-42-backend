@@ -17,6 +17,10 @@ const mockListing: Partial<Listing> = {
   active: true,
 };
 
+const mockTransactionManager = {
+  getRepository: jest.fn(),
+};
+
 const mockListingRepo = {
   find: jest.fn(),
   findOne: jest.fn(),
@@ -25,6 +29,9 @@ const mockListingRepo = {
   update: jest.fn(),
   remove: jest.fn(),
   createQueryBuilder: jest.fn(),
+  manager: {
+    transaction: jest.fn(async (cb) => cb(mockTransactionManager)),
+  },
 };
 
 const mockImageRepo = {
@@ -32,7 +39,12 @@ const mockImageRepo = {
   save: jest.fn(),
   update: jest.fn(),
   remove: jest.fn(),
+  find: jest.fn(),
+  delete: jest.fn(),
   findOne: jest.fn(),
+  manager: {
+    transaction: jest.fn(async (cb) => cb(mockTransactionManager)),
+  },
 };
 
 const mockPriceRepo = {
@@ -49,6 +61,14 @@ describe('ListingsService', () => {
   let service: ListingsService;
 
   beforeEach(async () => {
+    mockTransactionManager.getRepository.mockImplementation((entity) => {
+      if (entity === Listing) return mockListingRepo;
+      if (entity === ListingImage) return mockImageRepo;
+      if (entity === HistoricPrice) return mockPriceRepo;
+      if (entity === Seller) return mockSellerRepo;
+      return null;
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ListingsService,
@@ -61,6 +81,8 @@ describe('ListingsService', () => {
 
     service = module.get<ListingsService>(ListingsService);
     jest.clearAllMocks();
+    mockImageRepo.find.mockResolvedValue([]);
+    mockImageRepo.delete.mockResolvedValue(undefined);
   });
 
   // ── findAll ──────────────────────────────────────────────────────────────────
@@ -109,13 +131,23 @@ describe('ListingsService', () => {
   // ── create ───────────────────────────────────────────────────────────────────
 
   describe('create', () => {
-    const dto = { title: 'New Book', selling_price: 50000 };
+    const dto = {
+      title: 'New Book',
+      selling_price: 50000,
+      images: [{ url: 'http://img.com/new-book.jpg' }],
+    };
 
     it('should create a listing and record initial price history', async () => {
       mockSellerRepo.findOne.mockResolvedValue(mockSeller);
       mockListingRepo.create.mockReturnValue({ ...mockListing });
       mockListingRepo.save.mockResolvedValue({ ...mockListing, id: 1 });
+      mockListingRepo.findOne.mockResolvedValue({
+        ...mockListing,
+        images: [{ id: 1, url: 'http://img.com/new-book.jpg', sort_order: 0 }],
+      });
       mockPriceRepo.save.mockResolvedValue({});
+      mockImageRepo.create.mockImplementation((input) => input);
+      mockImageRepo.save.mockResolvedValue([{ id: 1 }]);
 
       await service.create(10, dto);
 
@@ -194,8 +226,15 @@ describe('ListingsService', () => {
     it('should add an image to a listing', async () => {
       mockListingRepo.findOne.mockResolvedValue(mockListing);
       mockSellerRepo.findOne.mockResolvedValue(mockSeller);
+      mockImageRepo.find
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { id: 1, listing_id: 1, url: 'http://img.com/1.jpg', is_primary: true, sort_order: 0 },
+        ]);
       mockImageRepo.create.mockReturnValue({ url: 'http://img.com/1.jpg', listing_id: 1 });
-      mockImageRepo.save.mockResolvedValue({ id: 1, url: 'http://img.com/1.jpg' });
+      mockImageRepo.save
+        .mockResolvedValueOnce({ id: 1, url: 'http://img.com/1.jpg', listing_id: 1 })
+        .mockResolvedValueOnce(undefined);
 
       const result = await service.addImage(1, 10, { url: 'http://img.com/1.jpg' });
 
@@ -205,6 +244,14 @@ describe('ListingsService', () => {
     it('should reset is_primary on other images when new image is primary', async () => {
       mockListingRepo.findOne.mockResolvedValue(mockListing);
       mockSellerRepo.findOne.mockResolvedValue(mockSeller);
+      mockImageRepo.find
+        .mockResolvedValueOnce([
+          { id: 10, listing_id: 1, url: 'http://img.com/existing.jpg', is_primary: true, sort_order: 0 },
+        ])
+        .mockResolvedValueOnce([
+          { id: 10, listing_id: 1, url: 'http://img.com/existing.jpg', is_primary: false, sort_order: 0 },
+          { id: 11, listing_id: 1, url: 'http://img.com/2.jpg', is_primary: true, sort_order: 1 },
+        ]);
       mockImageRepo.update.mockResolvedValue(undefined);
       mockImageRepo.create.mockReturnValue({});
       mockImageRepo.save.mockResolvedValue({});
