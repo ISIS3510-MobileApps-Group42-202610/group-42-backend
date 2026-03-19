@@ -44,23 +44,7 @@ export class ReviewsService {
     });
     await this.reviewsRepository.save(review);
 
-    // Recalculate seller avg_rating
-    const allReviews = await this.reviewsRepository
-      .createQueryBuilder('review')
-      .innerJoin('review.transaction', 'transaction')
-      .where('transaction.seller_id = :sellerId', {
-        sellerId: transaction.seller_id,
-      })
-      .andWhere('review.rating IS NOT NULL')
-      .getMany();
-
-    if (allReviews.length > 0) {
-      const avg =
-        allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-      await this.sellersRepository.update(transaction.seller_id, {
-        avg_rating: avg,
-      });
-    }
+    await this.recalculateSellerAverage(transaction.seller_id);
 
     return review;
   }
@@ -68,6 +52,57 @@ export class ReviewsService {
   async findByTransaction(transactionId: number) {
     return this.reviewsRepository.findOne({
       where: { transaction_id: transactionId },
+    });
+  }
+
+  async findAverageByListing(listingId: number) {
+    const result = await this.reviewsRepository
+      .createQueryBuilder('review')
+      .innerJoin('review.transaction', 'transaction')
+      .select('AVG(review.rating)', 'average')
+      .addSelect('COUNT(review.id)', 'count')
+      .where('transaction.listing_id = :listingId', { listingId })
+      .andWhere('review.rating IS NOT NULL')
+      .getRawOne<{ average: string | null; count: string }>();
+
+    const reviews_count = Number(result?.count ?? 0);
+    const average_rating = result?.average ? Number(result.average) : 0;
+
+    return {
+      listing_id: listingId,
+      average_rating,
+      reviews_count,
+    };
+  }
+
+  async remove(userId: number, transactionId: number) {
+    const transaction = await this.transactionsRepository.findOne({
+      where: { id: transactionId },
+      relations: ['review'],
+    });
+
+    if (!transaction) throw new NotFoundException('Transaction not found');
+    if (transaction.buyer_id !== userId)
+      throw new ForbiddenException('Not your transaction');
+    if (!transaction.review) throw new NotFoundException('Review not found');
+
+    await this.reviewsRepository.delete(transaction.review.id);
+    await this.recalculateSellerAverage(transaction.seller_id);
+
+    return { message: 'Review deleted' };
+  }
+
+  private async recalculateSellerAverage(sellerId: number) {
+    const result = await this.reviewsRepository
+      .createQueryBuilder('review')
+      .innerJoin('review.transaction', 'transaction')
+      .select('AVG(review.rating)', 'average')
+      .where('transaction.seller_id = :sellerId', { sellerId })
+      .andWhere('review.rating IS NOT NULL')
+      .getRawOne<{ average: string | null }>();
+
+    await this.sellersRepository.update(sellerId, {
+      avg_rating: result?.average ? Number(result.average) : 0,
     });
   }
 }

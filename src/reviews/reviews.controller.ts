@@ -3,6 +3,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -48,5 +49,18 @@ export class ReviewsController {
     @Param('transactionId', ParseIntPipe) transactionId: number,
   ) {
     return this.reviewsService.findByTransaction(transactionId);
+  }
+
+  @Get('listing/:listingId/average')
+  findAverageByListing(@Param('listingId', ParseIntPipe) listingId: number) {
+    return this.reviewsService.findAverageByListing(listingId);
+  }
+
+  @Delete('transaction/:transactionId')
+  remove(
+    @Request() req,
+    @Param('transactionId', ParseIntPipe) transactionId: number,
+  ) {
+    return this.reviewsService.remove(req.user.id, transactionId);
   }
 }
