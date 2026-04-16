@@ -15,6 +15,7 @@ import {
 import { ListingsService } from './listings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateListingDto, UpdateListingDto, AddImageDto } from './listing.dto';
+import { GetSeasonalDemandQueryDto } from './seasonal-demand.dto';
 
 @Controller('listings')
 export class ListingsController {
@@ -37,6 +38,11 @@ export class ListingsController {
   @UseGuards(JwtAuthGuard)
   async getMyListings(@Request() req) {
     return this.listingsService.findMyListings(req.user.id);
+  }
+
+  @Get('analytics/seasonal-demand')
+  getSeasonalDemand(@Query() query: GetSeasonalDemandQueryDto) {
+    return this.listingsService.getSeasonalDemand(query);
   }
 
   @Get(':id')
