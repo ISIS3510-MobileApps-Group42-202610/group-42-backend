@@ -34,6 +34,11 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
+  @Get('me/following')
+  getFollowing(@Request() req) {
+    return this.usersService.getFollowing(req.user.id);
+  }
+
   @Patch('me')
   updateProfile(@Request() req, @Body() dto: any) {
     return this.usersService.update(req.user.id, dto);

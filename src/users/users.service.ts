@@ -38,6 +38,16 @@ export class UsersService {
     return user.wishlist;
   }
 
+  async getFollowing(userId: number) {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['following', 'following.seller'],
+    });
+    if (!user) throw new NotFoundException(`User ${userId} not found`);
+    return user.following;
+  }
+
+
   async addToWishlist(userId: number, listingId: number) {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
