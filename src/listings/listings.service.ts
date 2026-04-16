@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
@@ -11,6 +12,13 @@ import { Listing } from './listing.entity';
 import { ListingImage } from './listing-image.entity';
 import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
+import { AcademicCalendarPhase } from './academic-calendar-phase.entity';
+import { ACADEMIC_CALENDAR_PHASES_SEED } from './academic-calendar.seed';
+import {
+  GetSeasonalDemandQueryDto,
+  SeasonalDemandGrain,
+  SeasonalDemandResponseDto,
+} from './seasonal-demand.dto';
 import {
   CreateListingDto,
   UpdateListingDto,
@@ -21,7 +29,7 @@ import {
 import { HomeResponseDto, CategoryRankDto } from './home.dto';
 
 @Injectable()
-export class ListingsService {
+export class ListingsService implements OnModuleInit {
   constructor(
     @InjectRepository(Listing)
     private listingsRepository: Repository<Listing>,
@@ -31,7 +39,13 @@ export class ListingsService {
     private pricesRepository: Repository<HistoricPrice>,
     @InjectRepository(Seller)
     private sellersRepository: Repository<Seller>,
+    @InjectRepository(AcademicCalendarPhase)
+    private calendarPhasesRepository: Repository<AcademicCalendarPhase>,
   ) {}
+
+  async onModuleInit() {
+    await this.seedAcademicCalendarPhases();
+  }
 
   async findAll(category?: string, condition?: string) {
     const where: any = { active: true };
@@ -462,6 +476,107 @@ export class ListingsService {
     };
   }
 
+  async getSeasonalDemand(
+    query: GetSeasonalDemandQueryDto,
+  ): Promise<SeasonalDemandResponseDto> {
+    const grain = query.grain ?? SeasonalDemandGrain.MONTH;
+    const universityCode = query.university_code ?? 'UNIANDES';
+    const { from, to } = this.resolveDateRange(query.from, query.to);
+
+    if (from > to) {
+      throw new BadRequestException('"from" must be before or equal to "to"');
+    }
+
+    const periodExpr =
+      grain === SeasonalDemandGrain.WEEK ? 'week' : SeasonalDemandGrain.MONTH;
+
+    const rows = await this.listingsRepository.query(
+      `
+      WITH event_rows AS (
+        SELECT
+          l.created_at::date AS event_date,
+          c.code AS course_code,
+          c.faculty AS course_faculty,
+          l.category::text AS category,
+          1::int AS listings_created,
+          0::int AS transactions_completed
+        FROM listings l
+        LEFT JOIN courses c ON c.id = l.course_id
+        WHERE l.created_at::date BETWEEN $1::date AND $2::date
+
+        UNION ALL
+
+        SELECT
+          t.created_at::date AS event_date,
+          c.code AS course_code,
+          c.faculty AS course_faculty,
+          l.category::text AS category,
+          0::int AS listings_created,
+          1::int AS transactions_completed
+        FROM transactions t
+        JOIN listings l ON l.id = t.listing_id
+        LEFT JOIN courses c ON c.id = l.course_id
+        WHERE t.created_at::date BETWEEN $1::date AND $2::date
+      ),
+      event_enriched AS (
+        SELECT
+          date_trunc('${periodExpr}', e.event_date::timestamp)::date AS period_start,
+          COALESCE(
+            NULLIF(TRIM(e.course_faculty), ''),
+            CASE
+              WHEN UPPER(COALESCE(e.course_code, '')) LIKE 'CS%' OR UPPER(COALESCE(e.course_code, '')) LIKE 'EE%' THEN 'Engineering'
+              WHEN UPPER(COALESCE(e.course_code, '')) LIKE 'BUS%' OR UPPER(COALESCE(e.course_code, '')) LIKE 'ECON%' THEN 'Business'
+              WHEN UPPER(COALESCE(e.course_code, '')) LIKE 'MED%' OR UPPER(COALESCE(e.course_code, '')) LIKE 'NUR%' THEN 'Health'
+              WHEN UPPER(COALESCE(e.course_code, '')) LIKE 'LAW%' THEN 'Law'
+              WHEN UPPER(COALESCE(e.course_code, '')) LIKE 'PSY%' THEN 'Social Sciences'
+              WHEN e.category IN ('textbook', 'notes', 'supplies') THEN 'General Academics'
+              WHEN e.category = 'electronics' THEN 'Engineering'
+              ELSE 'Other/Unknown'
+            END
+          ) AS faculty,
+          COALESCE(acp.phase_name, 'out_of_calendar') AS calendar_phase,
+          e.listings_created,
+          e.transactions_completed
+        FROM event_rows e
+        LEFT JOIN academic_calendar_phases acp
+          ON acp.university_code = $3
+         AND e.event_date BETWEEN acp.start_date AND acp.end_date
+      )
+      SELECT
+        period_start,
+        faculty,
+        calendar_phase,
+        SUM(listings_created)::int AS listings_created,
+        SUM(transactions_completed)::int AS transactions_completed,
+        CASE
+          WHEN SUM(listings_created) = 0 THEN 0
+          ELSE ROUND(SUM(transactions_completed)::numeric / SUM(listings_created), 4)
+        END AS conversion_rate
+      FROM event_enriched
+      GROUP BY period_start, faculty, calendar_phase
+      ORDER BY period_start ASC, faculty ASC, calendar_phase ASC;
+      `,
+      [from, to, universityCode],
+    );
+
+    return {
+      meta: {
+        grain,
+        from,
+        to,
+        university_code: universityCode,
+      },
+      data: rows.map((row) => ({
+        period_start: this.toIsoDate(row.period_start),
+        faculty: row.faculty,
+        calendar_phase: row.calendar_phase,
+        listings_created: Number(row.listings_created),
+        transactions_completed: Number(row.transactions_completed),
+        conversion_rate: Number(row.conversion_rate),
+      })),
+    };
+  }
+
   private async getRecentListings(): Promise<Listing[]> {
     return this.listingsRepository
       .createQueryBuilder('listing')
@@ -540,5 +655,38 @@ export class ListingsService {
       category: item.category,
       count: parseInt(item.count, 10),
     }));
+  }
+
+  private async seedAcademicCalendarPhases() {
+    await this.calendarPhasesRepository.upsert(ACADEMIC_CALENDAR_PHASES_SEED, {
+      conflictPaths: [
+        'university_code',
+        'semester_code',
+        'phase_name',
+        'start_date',
+        'end_date',
+      ],
+      skipUpdateIfNoValuesChanged: true,
+    });
+  }
+
+  private resolveDateRange(from?: string, to?: string) {
+    const today = new Date();
+    const defaultFrom = `${today.getUTCFullYear()}-01-01`;
+    const normalizedFrom = from ?? defaultFrom;
+    const normalizedTo = to ?? this.toIsoDate(today);
+
+    return {
+      from: normalizedFrom,
+      to: normalizedTo,
+    };
+  }
+
+  private toIsoDate(value: Date | string) {
+    if (typeof value === 'string') {
+      return value.slice(0, 10);
+    }
+
+    return value.toISOString().slice(0, 10);
   }
 }
