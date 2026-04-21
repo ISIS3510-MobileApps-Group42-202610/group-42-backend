@@ -6,6 +6,7 @@ import { Listing } from '../../src/listings/listing.entity';
 import { ListingImage } from '../../src/listings/listing-image.entity';
 import { HistoricPrice } from '../../src/listings/historic-price.entity';
 import { Seller } from '../../src/sellers/seller.entity';
+import { AcademicCalendarPhase } from '../../src/listings/academic-calendar-phase.entity';
 
 const mockSeller: Partial<Seller> = { id: 1, user_id: 10 };
 
@@ -57,6 +58,10 @@ const mockSellerRepo = {
   findOne: jest.fn(),
 };
 
+const mockCalendarPhaseRepo = {
+  upsert: jest.fn(),
+};
+
 describe('ListingsService', () => {
   let service: ListingsService;
 
@@ -76,6 +81,10 @@ describe('ListingsService', () => {
         { provide: getRepositoryToken(ListingImage), useValue: mockImageRepo },
         { provide: getRepositoryToken(HistoricPrice), useValue: mockPriceRepo },
         { provide: getRepositoryToken(Seller), useValue: mockSellerRepo },
+        {
+          provide: getRepositoryToken(AcademicCalendarPhase),
+          useValue: mockCalendarPhaseRepo,
+        },
       ],
     }).compile();
 
