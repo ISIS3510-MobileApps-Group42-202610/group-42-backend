@@ -44,6 +44,16 @@ npm run build
 npm run start:prod
 ```
 
+### 5. Seed Uniandes course catalog (2026)
+```bash
+npm run seed:courses
+```
+
+Optional custom CSV path:
+```bash
+npm run seed:courses -- ./my-catalog.csv
+```
+
 > **Note:** `synchronize: true` is enabled in development. For production, set `NODE_ENV=production` and use TypeORM migrations.
 
 ---
