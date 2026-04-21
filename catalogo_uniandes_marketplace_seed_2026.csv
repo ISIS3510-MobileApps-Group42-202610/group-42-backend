@@ -1,0 +1,142 @@
+course_code,course_name,faculty,source_program,source_term,owner_prefix,is_active
+MATE-1201,Precálculo,Ciencias,Servicio/Core,2026,MATE,True
+MATE-1203,Cálculo Diferencial,Ciencias,Servicio/Core,2026,MATE,True
+MATE-1214,Cálculo Integral y Ecuaciones Diferenciales,Ciencias,Servicio/Core,2026,MATE,True
+MATE-1207,Cálculo Vectorial,Ciencias,Servicio/Core,2026,MATE,True
+MATE-1105,Álgebra Lineal,Ciencias,Servicio/Core,2026,MATE,True
+MATE-1252,Cálculo Integral y Probabilidad,Ciencias,Servicio/Core,2026,MATE,True
+MATE-1253,Álgebra Lineal y Cálculo 3,Ciencias,Servicio/Core,2026,MATE,True
+MATE-1741,Bioestadística,Ciencias,Servicio/Core,2026,MATE,True
+DERE-1300,Constitución y Democracia,Derecho,Servicio/Core,2026,DERE,True
+QUIM-1103,Química,Ciencias,Servicio/Core,2026,QUIM,True
+QUIM-1104,Laboratorio de Química,Ciencias,Servicio/Core,2026,QUIM,True
+QUIM-1301,Química Orgánica,Ciencias,Servicio/Core,2026,QUIM,True
+QUIM-1302,Laboratorio de Química Orgánica,Ciencias,Servicio/Core,2026,QUIM,True
+FISI-1210,Biofísica,Ciencias,Servicio/Core,2026,FISI,True
+FISI-1211,Laboratorio de Biofísica,Ciencias,Servicio/Core,2026,FISI,True
+ISIS-1001,Introducción a la Ingeniería de Sistemas,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-1221,Introducción a la Programación,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-1225,Estructuras de datos y algoritmos,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-1226,Diseño y Programación Orientada a Objetos,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-1311,Tecnologías e Infraestructura de Cómputo,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-1511,Fundamentos de Bases de Datos,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-1611,Inteligencia Artificial,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2011,Productos Digitales Innovadores,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2111,Elementos Esenciales de Lenguajes de Programación,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2112,Diseño de Algoritmos,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2211,Ingeniería de Software Moderna,Ingeniería,Ingeniería de Sistemas y Computación,2025-20/2026-20,ISIS,True
+ISIS-2212,Arquitecturas de Software Robustas,Ingeniería,Ingeniería de Sistemas y Computación,2025-20/2026-20,ISIS,True
+ISIS-2213,Diseño de Aplicaciones Complejas,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2214,Tecnologías Emergentes,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2311,Redes y Servicios de Comunicaciones,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2411,Ingeniería de Negocios Digitales,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-2611,Aprendizaje de Máquina,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-3007,Proyecto de Grado,Ingeniería,Ingeniería de Sistemas y Computación,2026-20,ISIS,True
+ISIS-3311,Ciberseguridad,Ingeniería,Ingeniería de Sistemas y Computación,2025-20/2026-20,ISIS,True
+ECON-1001,Introducción a la Economía Colombiana,Economía,Economía,2026-20,ECON,True
+ECON-1006,Pensando Problemas,Economía,Economía,2026-20,ECON,True
+ECON-1307,Análisis de Datos para Economía,Economía,Economía,2026-20,ECON,True
+ECON-1501,Historia Económica General,Economía,Economía,2026-20,ECON,True
+ECON-1502,Historia del Pensamiento Económico,Economía,Economía,2026-20,ECON,True
+ECON-1701,Contabilidad y Finanzas Corporativas,Economía,Economía,2026-20,ECON,True
+ECON-2105,Teoría de Juegos,Economía,Economía,2026-20,ECON,True
+ECON-2107,Introducción a la Microeconomía,Economía,Economía,2026-20,ECON,True
+ECON-2122,Microeconomía 2,Economía,Economía,2026-20,ECON,True
+ECON-2205,Haciendo Economía 1,Economía,Economía,2026-20,ECON,True
+ECON-2221,Introducción a la Macroeconomía,Economía,Economía,2026-20,ECON,True
+ECON-3123,Microeconomía 3,Economía,Economía,2026-20,ECON,True
+ECON-3222,Macroeconomía 2,Economía,Economía,2026-20,ECON,True
+ECON-3223,Macroeconomía 3,Economía,Economía,2026-20,ECON,True
+ECON-3321,Econometría 1,Economía,Economía,2026-20,ECON,True
+ECON-3322,Econometría 2,Economía,Economía,2026-20,ECON,True
+ECON-3501,Historia del Análisis Económico,Economía,Economía,2026-20,ECON,True
+ECON-3502,Historia Económica de Colombia,Economía,Economía,2026-20,ECON,True
+IIND-1000,Introducción a la Ingeniería Industrial,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2001,Diseño en Ingeniería Industrial,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2106,Probabilidad y Estadística 1,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2111,Fundamentos de Analítica de Datos,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2112,Fundamentos de Modelado Estadístico,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2205,Ingeniería de Producción,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2206,Ingeniería de la Cadena de Suministro,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2304,Modelado y Simulación Sistémica,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2305,Práctica Sistémica,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2401,Análisis de Decisión de Inversión,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2405,Fundamentos de Analítica Financiera,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2501,Modelado en Optimización,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-2502,Modelado de Sistemas Bajo Incertidumbre,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-3010,Proyectos de Diseño en IIND,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+IIND-3011,Capstone Project,Ingeniería,Ingeniería Industrial,2026-20,IIND,True
+ADMI-1101,Fundamentos de Administración y Gerencia,Administración,Administración,2025/soporte complementario,ADMI,True
+ADMI-1203,Planeación Financiera,Administración,Administración,2024/2025,ADMI,True
+ADMI-1401,Taller de habilidades informáticas,Administración,Administración,2024/2025,ADMI,True
+ADMI-1603,Comportamiento Organizacional,Administración,Administración,2025/2026,ADMI,True
+ADMI-2204,Decisiones de Inversión,Administración,Administración,2025/2026,ADMI,True
+ADMI-2301,Fundamentos de Mercadeo,Administración,Administración,2025/2026,ADMI,True
+ADMI-2302,Investigación de Mercados,Administración,Administración,2025/2026,ADMI,True
+ADMI-2403,Operaciones y Logística,Administración,Administración,2025/2026,ADMI,True
+ADMI-2801,La Gestión de lo Público,Administración,Administración,2024/2026,ADMI,True
+ADMI-3405,Sistemas de Información Gerencial,Administración,Administración,2024/2025,ADMI,True
+ADMI-3502,Estrategia,Administración,Administración,2025/2026,ADMI,True
+DCHO-1101,Proyectos 1,Derecho,Derecho,2025,DCHO,True
+DCHO-1102,Proyectos 2,Derecho,Derecho,2025,DCHO,True
+DCHO-1103,Proyectos 3,Derecho,Derecho,2025,DCHO,True
+DCHO-1201,"Sujeto, Norma y Sistema Jurídico",Derecho,Derecho,2025,DCHO,True
+DCHO-1202,"Estado, Poder y Justicia",Derecho,Derecho,2025,DCHO,True
+DCHO-1204,Propiedad,Derecho,Derecho,2025,DCHO,True
+DCHO-1205,Obligaciones,Derecho,Derecho,2025,DCHO,True
+DCHO-1206,Const.: Derechos y Garantías,Derecho,Derecho,2025,DCHO,True
+DCHO-1207,Negocio Jurídico,Derecho,Derecho,2025,DCHO,True
+DCHO-1208,Cons.: Est. del Estado y Hacienda Pública,Derecho,Derecho,2025,DCHO,True
+DCHO-1209,Teoría y Gestión del Conflicto,Derecho,Derecho,2025,DCHO,True
+DCHO-2101,Litigios 1,Derecho,Derecho,2025,DCHO,True
+DCHO-2102,Litigios 2,Derecho,Derecho,2025,DCHO,True
+DCHO-2201,Contratos,Derecho,Derecho,2025,DCHO,True
+DCHO-2202,Gestión Pública y Dere. Administrativo,Derecho,Derecho,2025,DCHO,True
+DCHO-2203,Trabajo,Derecho,Derecho,2025,DCHO,True
+DCHO-2204,Poder Punitivo,Derecho,Derecho,2025,DCHO,True
+DCHO-2205,Familias,Derecho,Derecho,2025,DCHO,True
+DCHO-2206,Teoría del Delito,Derecho,Derecho,2025,DCHO,True
+DCHO-2207,Responsabilidad y Daños,Derecho,Derecho,2025,DCHO,True
+DCHO-2208,Teoría Jurídica,Derecho,Derecho,2025,DCHO,True
+DCHO-3201,Delitos,Derecho,Derecho,2025,DCHO,True
+DCHO-3202,Política Social,Derecho,Derecho,2025,DCHO,True
+DCHO-3204,Contratos Estatales,Derecho,Derecho,2025,DCHO,True
+DCHO-3205,Sociedades,Derecho,Derecho,2025,DCHO,True
+DCHO-3206,Tributación,Derecho,Derecho,2025,DCHO,True
+DCHO-3207,"Empresa, Consumo y Comer. Electrónico",Derecho,Derecho,2025,DCHO,True
+MBIO-1224,Biomedicina Molecular,Medicina,Medicina,2026-1,MBIO,True
+MBIO-2104,Fundamentos de Biología Celular y Molecular,Medicina,Medicina,2026-1,MBIO,True
+MBIO-2310,Biología Molecular de la Célula,Medicina,Medicina,2026-1,MBIO,True
+MBIO-2502,Microbiología Médica Teoría,Medicina,Medicina,2026-1,MBIO,True
+MBIO-2502L,Microbiología Médica Laboratorio,Medicina,Medicina,2026-1,MBIO,True
+MEDI-1101,Introducción a la Profesión Médica,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1102,Habilidades de Comunicación I,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1103,Ética Médica y Profesionalismo I,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1104,Epidemiología,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1105,Principios del Desarrollo Humano,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1106,Medicina Social,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1208,Embriología,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1209,Histología,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1212,Inmunología,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1216,Patología,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1221,Neuroanatomía,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1222,Anatomía I,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1225,Fisiología,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1226,Bioquímica Médica,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1227,Anatomía II,Medicina,Medicina,2026-1,MEDI,True
+MEDI-1228,Farmacología,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2111,Semiología I,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2112,Semiología II,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2300,Genética Médica,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2301,Parasitología Médica,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2303,Sistema Cardiovascular,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2304,Sistema Hematopoyético y Neoplasias,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2305,Sistema Endocrinológico,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2306,Sistema Respiratorio,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2307,Sistema Compor. y Psiquiatría,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2308,Sistema Gastroin. y Nutrición,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2309,Sistema Nervioso,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2310,Sistema Urinario y Renal,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2311,Sistema Mucocutáneo,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2312,Sistema Osteomuscular,Medicina,Medicina,2026-1,MEDI,True
+MEDI-2313,Sistema Reproductivo,Medicina,Medicina,2026-1,MEDI,True
