@@ -3,12 +3,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { Seller } from '../sellers/seller.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Seller)
+    private sellersRepository: Repository<Seller>,
   ) {}
 
   async findAll() {
@@ -106,7 +109,20 @@ export class UsersService {
   }
 
   async update(id: number, dto: Partial<User>) {
-    await this.findOne(id);
+    const user = await this.findOne(id);
+
+    if (dto.is_seller === true && !user.seller) {
+      const existingSeller = await this.sellersRepository.findOne({
+        where: { user_id: id },
+      });
+
+      if (!existingSeller) {
+        await this.sellersRepository.save(
+          this.sellersRepository.create({ user_id: id }),
+        );
+      }
+    }
+
     await this.usersRepository.update(id, dto);
     return this.findOne(id);
   }

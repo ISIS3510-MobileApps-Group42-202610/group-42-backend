@@ -6,6 +6,7 @@ import {
   Delete,
   Req,
   UseGuards,
+  Get,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
@@ -26,7 +27,6 @@ export class AuthController {
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
-    console.log('DTO recibido:', JSON.stringify(dto));
     return this.authService.register(dto);
   }
 
@@ -46,6 +46,12 @@ export class AuthController {
   @HttpCode(200)
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@Req() req: AuthenticatedRequest) {
+    return this.authService.me(req.user.id);
   }
 
   @Delete('account')

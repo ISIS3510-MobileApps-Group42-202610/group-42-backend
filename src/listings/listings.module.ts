@@ -7,6 +7,7 @@ import { ListingImage } from './listing-image.entity';
 import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
 import { AcademicCalendarPhase } from './academic-calendar-phase.entity';
+import { User } from '../users/user.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AcademicCalendarPhase } from './academic-calendar-phase.entity';
       HistoricPrice,
       Seller,
       AcademicCalendarPhase,
+      User,
     ]),
   ],
   controllers: [ListingsController],

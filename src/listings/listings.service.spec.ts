@@ -1,12 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+} from '@nestjs/common';
 import { ListingsService } from '../../src/listings/listings.service';
 import { Listing } from '../../src/listings/listing.entity';
 import { ListingImage } from '../../src/listings/listing-image.entity';
 import { HistoricPrice } from '../../src/listings/historic-price.entity';
 import { Seller } from '../../src/sellers/seller.entity';
 import { AcademicCalendarPhase } from '../../src/listings/academic-calendar-phase.entity';
+import { User } from '../../src/users/user.entity';
 
 const mockSeller: Partial<Seller> = { id: 1, user_id: 10 };
 
@@ -56,6 +61,12 @@ const mockPriceRepo = {
 
 const mockSellerRepo = {
   findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+};
+
+const mockUserRepo = {
+  update: jest.fn(),
 };
 
 const mockCalendarPhaseRepo = {
@@ -71,6 +82,7 @@ describe('ListingsService', () => {
       if (entity === ListingImage) return mockImageRepo;
       if (entity === HistoricPrice) return mockPriceRepo;
       if (entity === Seller) return mockSellerRepo;
+      if (entity === User) return mockUserRepo;
       return null;
     });
 
@@ -81,6 +93,7 @@ describe('ListingsService', () => {
         { provide: getRepositoryToken(ListingImage), useValue: mockImageRepo },
         { provide: getRepositoryToken(HistoricPrice), useValue: mockPriceRepo },
         { provide: getRepositoryToken(Seller), useValue: mockSellerRepo },
+        { provide: getRepositoryToken(User), useValue: mockUserRepo },
         {
           provide: getRepositoryToken(AcademicCalendarPhase),
           useValue: mockCalendarPhaseRepo,
@@ -92,6 +105,7 @@ describe('ListingsService', () => {
     jest.clearAllMocks();
     mockImageRepo.find.mockResolvedValue([]);
     mockImageRepo.delete.mockResolvedValue(undefined);
+    mockUserRepo.update.mockResolvedValue(undefined);
   });
 
   // ── findAll ──────────────────────────────────────────────────────────────────
@@ -166,10 +180,66 @@ describe('ListingsService', () => {
       );
     });
 
-    it('should throw ForbiddenException if user is not a seller', async () => {
-      mockSellerRepo.findOne.mockResolvedValue(null);
+    it('should assign the listing to the authenticated user seller profile', async () => {
+      const authenticatedSeller = { id: 42, user_id: 10 };
+      mockSellerRepo.findOne.mockResolvedValue(authenticatedSeller);
+      mockListingRepo.create.mockImplementation((input) => input);
+      mockListingRepo.save.mockResolvedValue({ ...mockListing, id: 1 });
+      mockListingRepo.findOne.mockResolvedValue({
+        ...mockListing,
+        seller_id: authenticatedSeller.id,
+        images: [{ id: 1, url: 'http://img.com/new-book.jpg', sort_order: 0 }],
+      });
+      mockPriceRepo.save.mockResolvedValue({});
+      mockImageRepo.create.mockImplementation((input) => input);
+      mockImageRepo.save.mockResolvedValue([{ id: 1 }]);
 
-      await expect(service.create(10, dto)).rejects.toThrow(ForbiddenException);
+      await service.create(10, dto);
+
+      expect(mockSellerRepo.findOne).toHaveBeenCalledWith({
+        where: { user_id: 10 },
+        relations: ['user'],
+      });
+      expect(mockListingRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ seller_id: 42 }),
+      );
+    });
+
+    it('should create a seller profile automatically when missing', async () => {
+      mockSellerRepo.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 77, user_id: 10, user: { id: 10 } });
+      mockSellerRepo.create.mockReturnValue({ user_id: 10 });
+      mockSellerRepo.save.mockResolvedValue({ id: 77, user_id: 10 });
+      mockListingRepo.create.mockImplementation((input) => input);
+      mockListingRepo.save.mockResolvedValue({ ...mockListing, id: 1 });
+      mockListingRepo.findOne.mockResolvedValue({
+        ...mockListing,
+        seller_id: 77,
+        images: [{ id: 1, url: 'http://img.com/new-book.jpg', sort_order: 0 }],
+      });
+      mockPriceRepo.save.mockResolvedValue({});
+      mockImageRepo.create.mockImplementation((input) => input);
+      mockImageRepo.save.mockResolvedValue([{ id: 1 }]);
+
+      await service.create(10, dto);
+
+      expect(mockSellerRepo.create).toHaveBeenCalledWith({ user_id: 10 });
+      expect(mockSellerRepo.save).toHaveBeenCalledWith({ user_id: 10 });
+      expect(mockUserRepo.update).toHaveBeenCalledWith(10, { is_seller: true });
+      expect(mockListingRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ seller_id: 77 }),
+      );
+    });
+
+    it('should throw ConflictException if seller profile belongs to another user', async () => {
+      mockSellerRepo.findOne.mockResolvedValue({
+        id: 42,
+        user_id: 10,
+        user: { id: 99 },
+      });
+
+      await expect(service.create(10, dto)).rejects.toThrow(ConflictException);
     });
   });
 

@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +13,7 @@ import { Listing } from './listing.entity';
 import { ListingImage } from './listing-image.entity';
 import { HistoricPrice } from './historic-price.entity';
 import { Seller } from '../sellers/seller.entity';
+import { User } from '../users/user.entity';
 import { AcademicCalendarPhase } from './academic-calendar-phase.entity';
 import { ACADEMIC_CALENDAR_PHASES_SEED } from './academic-calendar.seed';
 import {
@@ -39,6 +41,8 @@ export class ListingsService implements OnModuleInit {
     private pricesRepository: Repository<HistoricPrice>,
     @InjectRepository(Seller)
     private sellersRepository: Repository<Seller>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     @InjectRepository(AcademicCalendarPhase)
     private calendarPhasesRepository: Repository<AcademicCalendarPhase>,
   ) {}
@@ -71,10 +75,9 @@ export class ListingsService implements OnModuleInit {
   }
 
   async create(userId: number, dto: CreateListingDto) {
-    const seller = await this.sellersRepository.findOne({
-      where: { user_id: userId },
+    const seller = await this.findSellerForUser(userId, {
+      createIfMissing: true,
     });
-    if (!seller) throw new ForbiddenException('User is not a seller');
 
     const { images, ...listingPayload } = dto;
     const normalizedImages = this.normalizeImages(images);
@@ -115,11 +118,9 @@ export class ListingsService implements OnModuleInit {
     const listing = await this.listingsRepository.findOne({ where: { id } });
     if (!listing) throw new NotFoundException(`Listing #${id} not found`);
 
-    const seller = await this.sellersRepository.findOne({
-      where: { user_id: userId },
-    });
+    const seller = await this.findSellerForUser(userId);
 
-    if (!seller || listing.seller_id !== seller.id) {
+    if (listing.seller_id !== seller.id) {
       throw new ForbiddenException('Not your listing');
     }
 
@@ -169,11 +170,9 @@ export class ListingsService implements OnModuleInit {
 
   async remove(id: number, userId: number) {
     const listing = await this.findOne(id);
-    const seller = await this.sellersRepository.findOne({
-      where: { user_id: userId },
-    });
+    const seller = await this.findSellerForUser(userId);
 
-    if (!seller || listing.seller_id !== seller.id) {
+    if (listing.seller_id !== seller.id) {
       throw new ForbiddenException('Not your listing');
     }
 
@@ -183,11 +182,9 @@ export class ListingsService implements OnModuleInit {
 
   async addImage(listingId: number, userId: number, dto: AddImageDto) {
     const listing = await this.findOne(listingId);
-    const seller = await this.sellersRepository.findOne({
-      where: { user_id: userId },
-    });
+    const seller = await this.findSellerForUser(userId);
 
-    if (!seller || listing.seller_id !== seller.id) {
+    if (listing.seller_id !== seller.id) {
       throw new ForbiddenException('Not your listing');
     }
 
@@ -225,10 +222,8 @@ export class ListingsService implements OnModuleInit {
     });
     if (!image) throw new NotFoundException(`Image #${imageId} not found`);
 
-    const seller = await this.sellersRepository.findOne({
-      where: { user_id: userId },
-    });
-    if (!seller || image.listing.seller_id !== seller.id) {
+    const seller = await this.findSellerForUser(userId);
+    if (image.listing.seller_id !== seller.id) {
       throw new ForbiddenException('Not your listing');
     }
 
@@ -261,6 +256,39 @@ export class ListingsService implements OnModuleInit {
     });
 
     return this.normalizePrimaryAndOrder(normalized);
+  }
+
+  private async findSellerForUser(
+    userId: number,
+    options: { createIfMissing?: boolean } = {},
+  ) {
+    let seller = await this.sellersRepository.findOne({
+      where: { user_id: userId },
+      relations: ['user'],
+    });
+
+    if (!seller && options.createIfMissing) {
+      seller = await this.sellersRepository.save(
+        this.sellersRepository.create({ user_id: userId }),
+      );
+      await this.usersRepository.update(userId, { is_seller: true });
+      seller = await this.sellersRepository.findOne({
+        where: { id: seller.id },
+        relations: ['user'],
+      });
+    }
+
+    if (!seller) {
+      throw new ForbiddenException('User is not a seller');
+    }
+
+    if (seller.user && seller.user.id !== userId) {
+      throw new ConflictException(
+        'Seller profile does not match authenticated user',
+      );
+    }
+
+    return seller;
   }
 
   private async syncListingImages(

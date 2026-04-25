@@ -26,7 +26,7 @@ export class SellersService {
   async findByUser(userId: number) {
     const seller = await this.sellersRepository.findOne({
       where: { user_id: userId },
-      relations: ['listings', 'listings.images'],
+      relations: ['user', 'listings', 'listings.images'],
     });
     if (!seller) throw new NotFoundException('Seller profile not found');
     return seller;

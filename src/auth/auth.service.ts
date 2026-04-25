@@ -64,14 +64,14 @@ export class AuthService {
       is_seller: dto.is_seller || false,
     });
 
-    await this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
 
     if (dto.is_seller) {
-      const seller = this.sellersRepository.create({ user_id: user.id });
+      const seller = this.sellersRepository.create({ user_id: savedUser.id });
       await this.sellersRepository.save(seller);
     }
 
-    return this.signToken(user);
+    return this.signToken(savedUser);
   }
 
   // ── login ──────────────────────────────────────────────────────────────────
@@ -86,6 +86,18 @@ export class AuthService {
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     return this.signToken(user);
+  }
+
+  async me(userId: number) {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['seller'],
+    });
+    if (!user) throw new UnauthorizedException();
+
+    return {
+      user: this.serializeUser(user, user.seller ?? null),
+    };
   }
 
   // ── forgot password ────────────────────────────────────────────────────────
@@ -201,16 +213,36 @@ export class AuthService {
 
   // ── token ──────────────────────────────────────────────────────────────────
 
-  private signToken(user: User) {
+  private async signToken(user: User) {
+    const seller =
+      user.seller ??
+      (await this.sellersRepository.findOne({
+        where: { user_id: user.id },
+      }));
     const payload = { sub: user.id, email: user.email };
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        is_seller: user.is_seller,
-      },
+      user: this.serializeUser(user, seller ?? null),
+    };
+  }
+
+  private serializeUser(user: User, seller: Seller | null) {
+    return {
+      id: user.id,
+      name: user.name,
+      last_name: user.last_name,
+      email: user.email,
+      semester: user.semester,
+      profile_pic: user.profile_pic,
+      is_seller: user.is_seller,
+      seller: seller
+        ? {
+            id: seller.id,
+            user_id: seller.user_id,
+            total_sales: seller.total_sales,
+            avg_rating: seller.avg_rating,
+          }
+        : null,
     };
   }
 }

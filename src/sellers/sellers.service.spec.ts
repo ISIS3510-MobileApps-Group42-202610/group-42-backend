@@ -71,6 +71,10 @@ describe('SellersService', () => {
       const result = await service.findByUser(1);
 
       expect(result.user_id).toBe(1);
+      expect(mockSellerRepo.findOne).toHaveBeenCalledWith({
+        where: { user_id: 1 },
+        relations: ['user', 'listings', 'listings.images'],
+      });
     });
 
     it('should throw NotFoundException if user has no seller profile', async () => {

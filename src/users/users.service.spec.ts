@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { UsersService } from '../../src/users/users.service';
 import { User } from '../../src/users/user.entity';
+import { Seller } from '../../src/sellers/seller.entity';
 
 const mockUser: Partial<User> = {
   id: 1,
@@ -21,6 +22,12 @@ const mockUserRepo = {
   remove: jest.fn(),
 };
 
+const mockSellerRepo = {
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+};
+
 describe('UsersService', () => {
   let service: UsersService;
 
@@ -29,6 +36,7 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         { provide: getRepositoryToken(User), useValue: mockUserRepo },
+        { provide: getRepositoryToken(Seller), useValue: mockSellerRepo },
       ],
     }).compile();
 
@@ -121,9 +129,24 @@ describe('UsersService', () => {
       mockUserRepo.findOne.mockResolvedValue(mockUser);
       mockUserRepo.update.mockResolvedValue(undefined);
 
-      const result = await service.update(1, { name: 'Pedro' });
+      await service.update(1, { name: 'Pedro' });
 
       expect(mockUserRepo.update).toHaveBeenCalledWith(1, { name: 'Pedro' });
+    });
+
+    it('should create a seller profile when user becomes a seller', async () => {
+      mockUserRepo.findOne
+        .mockResolvedValueOnce({ ...mockUser, seller: null })
+        .mockResolvedValueOnce({ ...mockUser, is_seller: true, seller: { id: 3 } });
+      mockSellerRepo.findOne.mockResolvedValue(null);
+      mockSellerRepo.create.mockReturnValue({ user_id: 1 });
+      mockSellerRepo.save.mockResolvedValue({ id: 3, user_id: 1 });
+      mockUserRepo.update.mockResolvedValue(undefined);
+
+      await service.update(1, { is_seller: true });
+
+      expect(mockSellerRepo.create).toHaveBeenCalledWith({ user_id: 1 });
+      expect(mockSellerRepo.save).toHaveBeenCalledWith({ user_id: 1 });
     });
 
     it('should throw NotFoundException if user does not exist', async () => {

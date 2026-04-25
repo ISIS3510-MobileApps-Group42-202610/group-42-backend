@@ -117,6 +117,32 @@ describe('AuthService', () => {
       expect(mockSellerRepo.save).toHaveBeenCalled();
     });
 
+    it('should return the authenticated seller profile after seller registration', async () => {
+      const savedSeller = {
+        id: 7,
+        user_id: 1,
+        total_sales: 0,
+        avg_rating: 0,
+      };
+      mockUserRepo.findOne.mockResolvedValue(null);
+      bcryptHash.mockResolvedValue('hashed_password');
+      mockUserRepo.create.mockReturnValue({ ...mockUser, is_seller: true });
+      mockUserRepo.save.mockResolvedValue({
+        ...mockUser,
+        id: 1,
+        is_seller: true,
+      });
+      mockSellerRepo.create.mockReturnValue({ user_id: 1 });
+      mockSellerRepo.save.mockResolvedValue(savedSeller);
+      mockSellerRepo.findOne.mockResolvedValue(savedSeller);
+
+      const result = await service.register({ ...dto, is_seller: true });
+
+      expect(result.user.seller).toEqual(
+        expect.objectContaining({ id: 7, user_id: 1 }),
+      );
+    });
+
     it('should NOT create a Seller record when is_seller is false', async () => {
       mockUserRepo.findOne.mockResolvedValue(null);
       bcryptHash.mockResolvedValue('hashed_password');
@@ -140,6 +166,26 @@ describe('AuthService', () => {
       const result = await service.login(dto);
       expect(result.access_token).toBe('mock.jwt.token');
       expect(result.user.email).toBe('juan@uni.edu');
+    });
+
+    it('should return the seller profile for the logged-in user', async () => {
+      mockUserRepo.findOne.mockResolvedValue({ ...mockUser, is_seller: true });
+      mockSellerRepo.findOne.mockResolvedValue({
+        id: 8,
+        user_id: 1,
+        total_sales: 3,
+        avg_rating: 4.5,
+      });
+      bcryptCompare.mockResolvedValue(true);
+
+      const result = await service.login(dto);
+
+      expect(mockSellerRepo.findOne).toHaveBeenCalledWith({
+        where: { user_id: 1 },
+      });
+      expect(result.user.seller).toEqual(
+        expect.objectContaining({ id: 8, user_id: 1 }),
+      );
     });
 
     it('should throw UnauthorizedException if user not found', async () => {

@@ -16,7 +16,7 @@ export class Seller {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ unique: true })
   user_id: number;
 
   @Column({ default: 0 })
