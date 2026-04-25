@@ -8,6 +8,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Expose } from 'class-transformer';
 import { Seller } from '../sellers/seller.entity';
 import { User } from '../users/user.entity';
 import { Course } from '../courses/course.entity';
@@ -93,4 +94,9 @@ export class Listing {
 
   @OneToMany(() => Transaction, (transaction) => transaction.listing)
   transactions: Transaction[];
+
+  @Expose()
+  get owner_user_id(): number | null {
+    return this.seller?.user_id ?? null;
+  }
 }
