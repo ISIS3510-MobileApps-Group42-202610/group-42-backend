@@ -1,6 +1,7 @@
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export enum SeasonalDemandGrain {
+  DAY = 'day',
   MONTH = 'month',
   WEEK = 'week',
 }

@@ -516,7 +516,11 @@ export class ListingsService implements OnModuleInit {
     }
 
     const periodExpr =
-      grain === SeasonalDemandGrain.WEEK ? 'week' : SeasonalDemandGrain.MONTH;
+      grain === SeasonalDemandGrain.DAY
+        ? 'day'
+        : grain === SeasonalDemandGrain.WEEK
+          ? 'week'
+          : SeasonalDemandGrain.MONTH;
 
     const rows = await this.listingsRepository.query(
       `
