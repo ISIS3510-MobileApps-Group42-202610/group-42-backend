@@ -184,10 +184,11 @@ export class ListingsService implements OnModuleInit {
       throw new ForbiddenException('Not your listing');
     }
 
-    await this.listingsRepository.delete(id); 
+    await this.listingsRepository.update(id, { active: false });
 
-    return { message: 'Listing deleted' };
+    return { message: 'Listing deactivated' };
   }
+
   async addImage(listingId: number, userId: number, dto: AddImageDto) {
     const listing = await this.findOne(listingId);
     const seller = await this.findSellerForUser(userId);

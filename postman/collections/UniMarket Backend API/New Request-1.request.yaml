@@ -1,0 +1,5 @@
+$kind: http-request
+name: New Request
+url: "{{baseURL}}/version"
+method: GET
+order: 4308071363887104
