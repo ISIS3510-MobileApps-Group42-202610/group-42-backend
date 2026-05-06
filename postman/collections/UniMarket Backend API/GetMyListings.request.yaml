@@ -1,10 +1,9 @@
 $kind: http-request
 name: GetMyListings
-url: "{{baseURL}}/listings/my"
+url: "{{baseURL}}/transactions/my"
 method: GET
 auth:
   credentials:
-    - key: token
-      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjMwLCJlbWFpbCI6InNlYmFzbWFyMjAxNUBvdXRsb29rLmNvbSIsImlhdCI6MTc3ODEwMDY3MiwiZXhwIjoxNzc4NzA1NDcyfQ.rQN0f5U77pVKe5RA9t3Ve7GbSnzeOK_ZqdQXYl1UD60
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjMwLCJlbWFpbCI6InNlYmFzbWFyMjAxNUBvdXRsb29rLmNvbSIsImlhdCI6MTc3ODEwMDY3MiwiZXhwIjoxNzc4NzA1NDcyfQ.rQN0f5U77pVKe5RA9t3Ve7GbSnzeOK_ZqdQXYl1UD60
   type: bearer
 order: 4022309213708475

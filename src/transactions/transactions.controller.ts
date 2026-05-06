@@ -8,6 +8,7 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
+  Delete,
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -16,6 +17,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
+
+  @Get()
+  findAll() {
+    return this.transactionsService.findAll();
+  }
 
   @Post()
   create(@Request() req, @Body('listing_id', ParseIntPipe) listingId: number) {
@@ -35,5 +41,10 @@ export class TransactionsController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.transactionsService.findOne(id, req.user.id);
+  }
+
+  @Delete(':listingId')
+  deleteByListingId(@Param('listingId', ParseIntPipe) listingId: number) {
+    return this.transactionsService.deleteByListingId(listingId);
   }
 }

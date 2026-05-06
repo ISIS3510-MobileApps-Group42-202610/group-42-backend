@@ -21,6 +21,13 @@ export class TransactionsService {
     private sellersRepository: Repository<Seller>,
   ) {}
 
+  async findAll() {
+    return this.transactionsRepository.find({
+      relations: ['buyer', 'seller', 'listing'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
   async create(buyerId: number, listingId: number) {
     const listing = await this.listingsRepository.findOne({
       where: { id: listingId, active: true },
@@ -94,5 +101,22 @@ export class TransactionsService {
       relations: ['listing', 'buyer', 'review'],
       order: { created_at: 'DESC' },
     });
+  }
+
+  async deleteByListingId(listingId: number) {
+    const transactions = await this.transactionsRepository.find({
+      where: { listing_id: listingId },
+      relations: ['review'],
+    });
+
+    for (const tx of transactions) {
+      if (tx.review) {
+        await this.transactionsRepository.manager.delete('reviews', {
+          transaction_id: tx.id,
+        });
+      }
+    }
+
+    await this.transactionsRepository.delete({ listing_id: listingId });
   }
 }
