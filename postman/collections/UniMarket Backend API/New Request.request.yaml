@@ -1,0 +1,9 @@
+$kind: http-request
+name: New Request
+url: "{{baseURL}}/listings/62"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjMwLCJlbWFpbCI6InNlYmFzbWFyMjAxNUBvdXRsb29rLmNvbSIsImlhdCI6MTc3ODEwMDY3MiwiZXhwIjoxNzc4NzA1NDcyfQ.rQN0f5U77pVKe5RA9t3Ve7GbSnzeOK_ZqdQXYl1UD60
+order: 4203092060276971

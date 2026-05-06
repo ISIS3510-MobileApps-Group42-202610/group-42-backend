@@ -169,17 +169,25 @@ export class ListingsService implements OnModuleInit {
   }
 
   async remove(id: number, userId: number) {
-    const listing = await this.findOne(id);
+    const listing = await this.listingsRepository.findOne({
+      where: { id },
+      select: ['id', 'seller_id'],
+    });
+
+    if (!listing) {
+      throw new NotFoundException(`Listing #${id} not found`);
+    }
+
     const seller = await this.findSellerForUser(userId);
 
     if (listing.seller_id !== seller.id) {
       throw new ForbiddenException('Not your listing');
     }
 
-    await this.listingsRepository.remove(listing);
+    await this.listingsRepository.delete(id); 
+
     return { message: 'Listing deleted' };
   }
-
   async addImage(listingId: number, userId: number, dto: AddImageDto) {
     const listing = await this.findOne(listingId);
     const seller = await this.findSellerForUser(userId);
