@@ -128,8 +128,32 @@ export class UsersService {
   }
 
   async remove(id: number) {
-    const user = await this.findOne(id);
-    await this.usersRepository.remove(user);
-    return { message: 'User deleted' };
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['seller'],
+    });
+
+    if (!user) throw new NotFoundException(`User #${id} not found`);
+
+    await this.usersRepository.manager.transaction(async (manager) => {
+
+      await manager.query(`DELETE FROM wishlist WHERE user_id = $1`, [id]);
+
+      await manager.query(`DELETE FROM following WHERE user_id = $1 OR following_user_id = $1`, [id]);
+
+      await manager.delete('transactions', { buyer_id: id });
+
+      if (user.seller) {
+        await manager.delete('transactions', { seller_id: user.seller.id });
+
+        await manager.delete('listings', { seller_id: user.seller.id });
+
+        await manager.delete('sellers', { id: user.seller.id });
+      }
+
+      await manager.delete(User, id);
+    });
+
+    return { message: 'User deleted permanently' };
   }
 }
