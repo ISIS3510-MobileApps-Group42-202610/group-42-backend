@@ -69,14 +69,7 @@ export class ListingsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    try {
-      return this.listingsService.remove(id, req.user.id);
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Forbidden') {
-        return { statusCode: 403, message: 'Forbidden' };
-      }
-      throw error;
-    }
+    return this.listingsService.remove(id, req.user.id);
   }
 
   @Post(':id/images')
