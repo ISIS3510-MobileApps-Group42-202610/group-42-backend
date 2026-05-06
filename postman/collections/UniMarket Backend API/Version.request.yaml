@@ -1,5 +1,5 @@
 $kind: http-request
-name: New Request
+name: Version
 url: "{{baseURL}}/version"
 method: GET
 order: 4308071363887104
