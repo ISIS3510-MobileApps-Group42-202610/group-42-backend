@@ -63,3 +63,9 @@ export class DeleteAccountDto {
   @MinLength(6)
   password: string;
 }
+
+export class UpdateProfilePictureDto {
+  @IsString()
+  @IsNotEmpty()
+  profile_pic: string;
+}

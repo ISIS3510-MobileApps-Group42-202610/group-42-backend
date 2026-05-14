@@ -17,6 +17,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   DeleteAccountDto,
+  UpdateProfilePictureDto,
 } from './auth.dto';
 import { EmailService } from '../email/email.service';
 
@@ -163,6 +164,23 @@ export class AuthService {
     await this.usersRepository.save(matchedUser);
 
     return { message: 'Password reset successfully' };
+  }
+
+  async updateProfilePicture(userId: number, dto: UpdateProfilePictureDto) {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['seller'],
+    });
+
+    if (!user) throw new UnauthorizedException();
+
+    user.profile_pic = dto.profile_pic;
+
+    const savedUser = await this.usersRepository.save(user);
+
+    return {
+      user: this.serializeUser(savedUser, savedUser.seller ?? null),
+    };
   }
 
   // ── delete account ─────────────────────────────────────────────────────────

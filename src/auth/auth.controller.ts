@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
   Get,
+  Patch,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
@@ -16,6 +17,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   DeleteAccountDto,
+  UpdateProfilePictureDto,
 } from './auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -52,6 +54,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@Req() req: AuthenticatedRequest) {
     return this.authService.me(req.user.id);
+  }
+
+  @Patch('account')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  updateProfilePicture(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpdateProfilePictureDto,
+  ) {
+    return this.authService.updateProfilePicture(req.user.id, dto);
   }
 
   @Delete('account')
