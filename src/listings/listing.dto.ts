@@ -47,6 +47,10 @@ export class UpdateListingImageDto {
   @IsInt()
   @Min(0)
   sort_order?: number;
+
+  @IsOptional()
+  @IsInt()
+  course_id?: number;
 }
 
 export class CreateListingDto {
@@ -116,6 +120,10 @@ export class UpdateListingDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  course_id?: number;
 
   @IsOptional()
   @IsArray()
