@@ -12,12 +12,23 @@ type CsvRecord = {
   is_active: string;
 };
 
+const databaseUrl = process.env.MARKETPLACE_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  '';
+const useSsl =
+  databaseUrl.includes('neon.tech') ||
+  databaseUrl.includes('render.com') ||
+  databaseUrl.includes('supabase.co') ||
+  databaseUrl.includes('sslmode=require');
+
 const appDataSource = new DataSource({
   type: 'postgres',
-  url: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  url: databaseUrl,
+  ssl: useSsl
+    ? {
+        rejectUnauthorized: false,
+      }
+    : false,
   entities: ['src/**/*.entity.ts'],
   synchronize: false,
 });
