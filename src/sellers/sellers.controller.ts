@@ -29,4 +29,10 @@ export class SellersController {
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.sellersService.findOne(id);
   }
+
+  @Get(':id/profile')
+  getPublicProfile(@Param('id', ParseIntPipe) id: number) {
+    return this.sellersService.getPublicProfile(id);
+}
+
 }
