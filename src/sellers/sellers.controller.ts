@@ -25,14 +25,15 @@ export class SellersController {
     return this.sellersService.findByUser(req.user.id);
   }
 
+  @Get(':id/profile')
+  getPublicProfile(@Param('id', ParseIntPipe) id: number) {
+    return this.sellersService.getPublicProfile(id);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.sellersService.findOne(id);
   }
 
-  @Get(':id/profile')
-  getPublicProfile(@Param('id', ParseIntPipe) id: number) {
-    return this.sellersService.getPublicProfile(id);
-}
 
 }
