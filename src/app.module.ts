@@ -13,6 +13,7 @@ import { SellersModule } from './sellers/sellers.module';
 import { AuthModule } from './auth/auth.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { AdminController } from './admin/admin.controller';
+import { AiModule } from './ai/ai.module';
 
 const stage = process.env.STAGE ?? process.env.NODE_ENV ?? 'dev';
 const isProd = stage === 'prod' || stage === 'production';
@@ -43,6 +44,7 @@ const isProd = stage === 'prod' || stage === 'production';
     SellersModule,
     AuthModule,
     UploadsModule,
+    AiModule,
   ],
   controllers: [AppController, AdminController],
   providers: [AppService],
