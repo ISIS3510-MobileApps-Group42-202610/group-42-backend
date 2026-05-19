@@ -26,7 +26,7 @@ const isProd = stage === 'prod' || stage === 'production';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        url: configService.get('MARKETPLACE_DATABASE_URL'),
+        url: configService.get('DATABASE_URL'),
         autoLoadEntities: true,
         synchronize: !isProd,
         logging: !isProd,
