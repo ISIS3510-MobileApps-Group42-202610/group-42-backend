@@ -9,22 +9,25 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 @Injectable()
 export class AiService {
   async enhanceDescription(body: {
-    title: string;
-    category: string;
-    condition: string;
+    title?: string;
+    category?: string;
+    condition?: string;
     description?: string;
   }) {
-    if (!body?.title || !body?.category || !body?.condition) {
+    const title = body?.title?.trim() ?? '';
+    const category = body?.category?.trim() || 'Other';
+    const condition = body?.condition?.trim() || 'Good';
+    const description = body?.description?.trim() ?? '';
+
+    if (!title && !description) {
       throw new BadRequestException(
-        'title, category and condition are required',
+        'title or description is required',
       );
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      console.error('[AI_SERVICE] Missing GEMINI_API_KEY');
-
       throw new InternalServerErrorException(
         'GEMINI_API_KEY is not configured',
       );
@@ -38,19 +41,24 @@ export class AiService {
       });
 
       const prompt = `
-Create a short marketplace product description for a university student marketplace.
+You are improving a product description for a university marketplace.
 
-Title: ${body.title.trim()}
-Category: ${body.category.trim()}
-Condition: ${body.condition.trim()}
-Current description: ${body.description?.trim() ?? ''}
+Return ONLY the final product description.
+Do not use markdown.
+Do not use bullets.
+Do not use headings.
+Do not include title, category, condition, notes, labels, seller tips, or extra explanations.
+Do not use asterisks.
+Maximum 420 characters.
 
-Rules:
-- Write in English.
-- Maximum 80 words.
-- Sound natural and trustworthy.
-- Do not invent technical specs.
-- Mention useful details the seller should add if missing.
+Product title: ${title}
+Category: ${category}
+Condition: ${condition}
+Current description: ${description}
+
+Write a natural, trustworthy, concise description in English.
+If the category is Other, still generate a useful generic marketplace description.
+Do not invent specific brand, model, technical specs, accessories, or battery condition.
 `;
 
       const result = await model.generateContent(prompt);
@@ -61,7 +69,7 @@ Rules:
       }
 
       return {
-        enhanced_description: text.trim(),
+        enhanced_description: this.cleanOutput(text),
       };
     } catch (error: any) {
       console.error('[AI_SERVICE] Gemini error:', {
@@ -69,13 +77,40 @@ Rules:
         status: error?.status,
         name: error?.name,
         details: error?.errorDetails,
-        stack: error?.stack,
       });
 
-      throw new InternalServerErrorException({
-        message: 'Could not generate enhanced description',
-        error: error?.message ?? 'Unknown Gemini error',
-      });
+      return {
+        enhanced_description: this.buildFallbackDescription({
+          title,
+          category,
+          condition,
+          description,
+        }),
+      };
     }
+  }
+
+  private cleanOutput(text: string): string {
+    return text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#+/g, '')
+      .replace(/^description:\s*/i, '')
+      .replace(/^product description:\s*/i, '')
+      .trim()
+      .slice(0, 420);
+  }
+
+  private buildFallbackDescription(body: {
+    title: string;
+    category: string;
+    condition: string;
+    description: string;
+  }): string {
+    const titlePart = body.title || 'This item';
+
+    const base = `${titlePart} is available in ${body.condition.toLowerCase()} condition. It is a practical option for university students looking for an affordable and useful item. Please check the details with the seller before purchase.`;
+
+    return base.slice(0, 420);
   }
 }
