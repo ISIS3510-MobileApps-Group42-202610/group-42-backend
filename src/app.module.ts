@@ -14,6 +14,7 @@ import { AuthModule } from './auth/auth.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { AdminController } from './admin/admin.controller';
 import { AiModule } from './ai/ai.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 const stage = process.env.STAGE ?? process.env.NODE_ENV ?? 'dev';
 const isProd = stage === 'prod' || stage === 'production';
@@ -45,6 +46,7 @@ const isProd = stage === 'prod' || stage === 'production';
     AuthModule,
     UploadsModule,
     AiModule,
+    AnalyticsModule,
   ],
   controllers: [AppController, AdminController],
   providers: [AppService],
