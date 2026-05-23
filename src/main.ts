@@ -21,7 +21,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   app.enableCors();
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: ['analytics/supply-by-course'],
+  });
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',

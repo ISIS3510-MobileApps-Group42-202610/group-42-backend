@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Query,
+  Version,
+  VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { AnalyticsService, SupplyByCourseFilters } from './analytics.service';
 
@@ -11,6 +13,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('supply-by-course')
+  @Version(VERSION_NEUTRAL)
   getSupplyByCourse(
     @Query('faculty') faculty?: string,
     @Query('department_code') departmentCode?: string,
